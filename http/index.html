@@ -1,0 +1,49 @@
+<html>
+<head>
+	<script src="js/lib/jquery.min.js"></script>
+
+<script>
+
+function sendRequest(){
+	$.ajax({
+		url: "http://ec2-52-38-40-53.us-west-2.compute.amazonaws.com:3000/",
+		method: "GET",
+		success: function(response) {console.log(response);},
+		error: function(err) {console.log(err);}
+	});
+}
+function login() {
+
+	var password = $("#password").val();
+	var username = $("#username").val();
+
+	$.ajax({
+		url: "http://ec2-52-38-40-53.us-west-2.compute.amazonaws.com:3000/Login",
+		method: "POST",
+		data: {
+			"username" : username,
+			"password" : password
+		},
+		success: function(response) {
+			$("#response").html(response);
+		},
+		error: function(err) {console.log(err);}
+	});
+
+
+}
+
+</script>
+</head>
+
+
+<body>
+<button onclick="sendRequest()">Send request</button>
+
+<br><br>
+<input id="username" > </input>
+<input type="password" id="password"></input>
+<button onclick="login()">login</button>
+<div id="response"></div>
+</body>
+</html>
