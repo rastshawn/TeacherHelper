@@ -14,27 +14,10 @@ function sendRequest(){
 		error: function(err) {console.log(err);}
 	});
 }
-function login() {
 
-	var password = $("#password").val();
-	var username = $("#username").val();
-
-	$.ajax({
-		url: apiurl + "/Login",
-		method: "POST",
-		data: {
-			"username" : username,
-			"password" : password
-		},
-		success: function(response) {
-			$("#response").html(response);
-		},
-		error: function(err) {console.log(err);}
-	});
-
-
-}
-
+$(document).ready(function(){
+    $("#welcome").html(session.username);
+});
 function getStudents() {
 	$.ajax({
 		url:apiurl + "/GetStudents",
@@ -53,13 +36,9 @@ function getStudents() {
 
 <body>
 <button onclick="sendRequest()">Send request</button>
-
+<p>you should only see this page if you are logged in.</p>
+<p id="welcome"></p>
 <br><br>
-<input id="username" > </input>
-<input type="password" id="password"></input>
-<button onclick="login()">login</button>
-<div id="response"></div>
-
 <br><br>
 <button onclick="getStudents()">get students</button>
 <div id="studentTable"></div>
