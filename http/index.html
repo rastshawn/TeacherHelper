@@ -3,6 +3,8 @@
 	<script src="js/lib/jquery.min.js"></script>
 
 <script>
+var apiurl = "http://ec2-52-38-40-53.us-west-2.compute.amazonaws.com:3000";
+
 
 function sendRequest(){
 	$.ajax({
@@ -18,7 +20,7 @@ function login() {
 	var username = $("#username").val();
 
 	$.ajax({
-		url: "http://ec2-52-38-40-53.us-west-2.compute.amazonaws.com:3000/Login",
+		url: apiurl + "/Login",
 		method: "POST",
 		data: {
 			"username" : username,
@@ -33,6 +35,18 @@ function login() {
 
 }
 
+function getStudents() {
+	$.ajax({
+		url:apiurl + "/GetStudents",
+		method: "GET",
+		success: function(response) {
+			console.log(response);	
+			$("#studentTable").html(response);
+		},
+		error: function(err) {console.log(err);}
+	});
+}
+
 </script>
 </head>
 
@@ -45,5 +59,9 @@ function login() {
 <input type="password" id="password"></input>
 <button onclick="login()">login</button>
 <div id="response"></div>
+
+<br><br>
+<button onclick="getStudents()">get students</button>
+<div id="studentTable"></div>
 </body>
 </html>

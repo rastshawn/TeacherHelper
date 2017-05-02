@@ -37,15 +37,32 @@ app.use(function (req, res, next) {
     next();
 });
 
+function getPreData(spName){
+	var ret = '<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><';
+	ret += spName;
+	ret += ' xmlns="http://tempuri.org/">';
 
+	return ret;
+}
+function getPostData(spName){
+
+	var ret = '</' + spName;
+
+	ret += '></soap12:Body></soap12:Envelope>';
+
+	return ret;
+}
+
+function getResponseData(body){
+	
+	return JSON.parse(body.split('<')[0]); 
+}
 
 app.get('/', function (req, res) {
 	res.send('sent');
 	console.log("GET request recieved");
 });
 
-var preData = '<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><Login xmlns="http://tempuri.org/">';
-var postData = '</Login></soap12:Body></soap12:Envelope>';
 
 
 app.post('/Login', function (req, res) {
@@ -59,7 +76,7 @@ app.post('/Login', function (req, res) {
 		"password":password
 	};
 
-	var data = preData + "<username>" + username + "</username><password>" + password + "</password>" + postData;	 
+	var data = getPreData('Login') + "<username>" + username + "</username><password>" + password + "</password>" + getPostData('Login');	 
 
 
 	request.post({
@@ -74,13 +91,33 @@ app.post('/Login', function (req, res) {
 		console.log(err);
 		res.send("there was an error processing your request.");
 	} else {
-		var response = JSON.parse(body.split('<')[0])[0].Column1; // TODO rename column
+		var response = getResponseData(body);
+		response = response[0].Column1;
 		res.send(response);
 	}
 	});
 });
 
+app.get('/GetStudents', function(req, res) {
 
+	var data = getPreData('GetStudents') + getPostData('GetStudents');
+	request.post({
+		url:apiurl,
+		headers : {
+			"Content-Type": "application/soap+xml; charset=utf-8"
+		},
+		body: data
+	}, function callback(err, httpResponse, body) {
+	if (err) {
+		console.log('serverError');
+		console.log(err);
+		res.send("There was an error processing your request.");
+	} else {
+		var response = getResponseData(body);
+		res.send(response);	
+	}
+	});
+});
 
 app.listen(3000, function() {
 	console.log('backend running on port 3000');
