@@ -3,31 +3,39 @@
 	<script src="js/lib/jquery.min.js"></script>
 
 <script>
-var apiurl = "http://ec2-52-38-40-53.us-west-2.compute.amazonaws.com:3000";
 
 
 function sendRequest(){
 	$.ajax({
-		url: "http://ec2-52-38-40-53.us-west-2.compute.amazonaws.com:3000/",
+		url: "/",
 		method: "GET",
 		success: function(response) {console.log(response);},
 		error: function(err) {console.log(err);}
 	});
 }
 
-$(document).ready(function(){
-    $("#welcome").html(session.username);
-});
 function getStudents() {
 	$.ajax({
-		url:apiurl + "/GetStudents",
+		url: "/GetStudents",
 		method: "GET",
 		success: function(response) {
 			console.log(response);	
-			$("#studentTable").html(response);
+			$("#studentTable").html(response[0]);
 		},
 		error: function(err) {console.log(err);}
 	});
+}
+
+function showCurrentUser() {
+ 	$.ajax({
+		url: "/GetUser",
+		method: "GET",
+		success: function(response) {
+			console.log(response);	
+			$("#user").html(response);
+		},
+		error: function(err) {console.log(err);}
+	});   
 }
 
 </script>
@@ -35,9 +43,11 @@ function getStudents() {
 
 
 <body>
+<button onclick="showCurrentUser()">get current user</button>
+<div id="user"></div>
 <button onclick="sendRequest()">Send request</button>
 <p>you should only see this page if you are logged in.</p>
-<p id="welcome"></p>
+<p><a href="/logout">Logout</a></p>
 <br><br>
 <br><br>
 <button onclick="getStudents()">get students</button>

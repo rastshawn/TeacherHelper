@@ -124,6 +124,19 @@ app.post('/Login', function (req, res) {
 	});
 });
 
+
+app.get('/logout', function(req, res) {
+    req.session.destroy(function(err) {
+        if (err) console.log(err);
+        else res.redirect('/');
+    });
+});
+
+app.get('/GetUser', function(req, res) {
+
+    res.send(req.session.username);	
+});
+
 app.get('/GetStudents', function(req, res) {
 
 	var data = getPreData('GetStudents') + getPostData('GetStudents');
