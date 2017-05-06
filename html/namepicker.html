@@ -57,14 +57,13 @@ function loadPage(){
 }
 
 function drawTable(){
-    var html = "<table id='studentTable' class='table'><th>StudentID</th><th>First Name</th><th>Last Name</th>";
+    var html = "<table id='studentTable' class='table'><th>First Name</th><th>Last Name</th>";
     for (var s in studentsInHat){
         var student = studentsInHat[s];
     
 
 
         html += "<tr>\n";
-        html += "\t<td class='studentID'>" + student.StudentID + "</td>\n";
         html += "\t<td class='studentFName'>" + student.fName + "</td>\n";
         html += "\t<td class='studentLName'>" + student.lName + "</td>\n";
         html += "</tr>";
