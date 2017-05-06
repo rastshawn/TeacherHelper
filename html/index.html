@@ -1,56 +1,149 @@
 <html>
 <head>
 	<script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css" />
+    <script src = "js/index.js"></script>
 
-<script>
+    <script>
+
+$(document).ready(function(){
+    loadPage();
+});
 
 
-function sendRequest(){
-	$.ajax({
-		url: "/",
-		method: "GET",
-		success: function(response) {console.log(response);},
-		error: function(err) {console.log(err);}
-	});
+var classes = [];
+
+
+function loadPage(){
+
+    $.ajax({
+        url: "/GetClasses",
+        method: "GET",
+        success: function(response) {
+            console.log(response);
+            classes = response;
+            var options = "";
+            for (var c in classes){
+                options += "<option value='" + c + "'>" + classes[c].Name +
+                    '</option>';
+            }
+
+            $("#selectClasses").html(options);
+            loadClass();
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    
+    });
+
+    $.ajax({
+        url: "/GetCurrentTeacher",
+        method: "get",
+        success: function(response){
+            $("#welcome").html("Hello, " + response.fName + "!");
+        },
+        error: function(err) {
+            console.log(err); // kickass error handling
+        }
+    });
+
 }
 
-function getStudents() {
-	$.ajax({
-		url: "/GetStudents",
-		method: "GET",
-		success: function(response) {
-			console.log(response);	
-			$("#studentTable").html(response[0]);
-		},
-		error: function(err) {console.log(err);}
-	});
+function loadClass() {
+    var ClassID = $("#selectClasses").val();
+    $("#h3ClassName").html(classes[ClassID].Name);    
 }
 
-function showCurrentUser() {
- 	$.ajax({
-		url: "/GetUser",
-		method: "GET",
-		success: function(response) {
-			console.log(response);	
-			$("#user").html(response);
-		},
-		error: function(err) {console.log(err);}
-	});   
-}
 
-</script>
+    </script>
 </head>
 
 
 <body>
-<button onclick="showCurrentUser()">get current user</button>
-<div id="user"></div>
-<button onclick="sendRequest()">Send request</button>
-<p>you should only see this page if you are logged in.</p>
-<p><a href="/logout">Logout</a></p>
-<br><br>
-<br><br>
-<button onclick="getStudents()">get students</button>
-<div id="studentTable"></div>
+
+<div id="MyClasses">
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">TeacherHelperNet</a>
+        </div>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="/">Home</a></li>
+          <li><a href="#">Page 1</a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="/Account">Account Settings</a></li>
+            <li><a href="/Logout"><!--<span class="glyphicon glyphicon log-out"></span> -->Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+    
+    <div class="container-fluid">
+        <div class="col-sm-4"><h2>My Classes</h2>
+        </div>
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4">
+            <div id="welcome">
+
+            </div>
+        </div>
+    </div>
+    <hr>
+    <div class="container-fluid">
+        <div class="col-sm-2">
+            <div id="divClassesSelector">
+                <select id="selectClasses" onchange="loadClass()">
+                    <option value="def">-- Select a class --</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-sm-8">
+            <h3 id="h3ClassName">Class Name</h3>
+        </div>
+        <div class="col-sm-2">
+            <button id="buttonEdit" class="btn btn-primary" onclick="editClass()">
+                Edit
+            </button>
+        </div>
+    </div>
+    <div id="buttons">
+        <div class="container-fluid">
+            <div class="col-sm-3">
+                <div class="btn btn-primary mainButton" onclick="loadAssignments()">
+                    <h4 class="btnText">Assignments</h4>
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="btn btn-primary mainButton" onclick="loadAttendance()">
+                    <h4 class="btnText">Attendance</h4>
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="btn btn-primary mainButton" onclick="loadNamePicker()">
+                    <h4 class="btnText">Name Picker</h4>
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="btn btn-primary mainButton" onclick="loadSeatingCharts()">
+                    <h4 class="btnText">Seating Charts</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-fluid">
+            <div class="col-sm-3"></div>
+            <div class="col-sm-6">
+                <div class="btn btn-primary rosterButton" onclick="loadRoster()">
+                    <h4 class="rosterButtonText">Roster</h4>
+                </div>
+            </div>
+            <div class="col-sm-3"></div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

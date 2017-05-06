@@ -1,0 +1,66 @@
+#h3ClassName {
+    text-align: center;
+}
+
+#btnEdit {
+    float:right;
+}
+
+.mainButton {
+    margin:5px;
+    width:100%;
+    height:150px;
+}
+
+.rosterButton {
+    margin:5px;
+    width:100%;
+    height:75px;
+    margin-top:15px;
+}
+
+#selectClasses {
+    width: 100%;
+    text-align-last: center;
+}
+
+#buttonEdit {
+    width: 100%;
+    float: right;
+}
+
+.btnText {
+    line-height:100px;
+}
+
+.rosterButtonText {
+    line-height:40px;
+}
+
+#classNameInput {
+    height:40px;
+    width:100%;
+}
+
+.tableButtons{
+    width:40%;
+    margin:5px;
+}
+
+#mainEditButton{
+    float:right;
+}
+
+#submitEdits{
+    float:right;
+}
+
+#welcome{
+    float:right;
+    text-align:right;
+}
+
+#pickedStudent{
+    text-align:center;
+    margin-top:50px;
+}

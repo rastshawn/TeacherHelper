@@ -1,0 +1,165 @@
+<html>
+<head>
+	<script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css" />
+<!--    <script src = "js/namepicker.js"></script> -->
+
+    <script>
+
+$(document).ready(function(){
+    loadPage();
+});
+
+
+var ClassID = window.location.href.split("ClassID=").pop();
+var studentsInHat = [];
+
+
+function loadPage(){
+    console.log(ClassID);
+
+    $.ajax({
+        url: "/GetClasses",
+        method:"GET",
+        success: function(response) {
+            var classes = response;
+            for (var c in classes){
+                var cl = classes[c];
+
+                if (cl.ClassID == ClassID) {
+                    $("#h3ClassName").html(cl.Name);
+                }
+            }
+        },
+        error: function(err) {
+            console.log(err);
+        }
+    });
+
+
+    $.ajax({
+        url: "/GetStudentsInHat",
+        method: "POST",
+        data: {"ClassID" : ClassID},
+        success: function(response) {
+            console.log(response);
+            studentsInHat = response;
+            drawTable();
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    
+    });
+
+}
+
+function drawTable(){
+    var html = "<table id='studentTable' class='table'><th>StudentID</th><th>First Name</th><th>Last Name</th>";
+    for (var s in studentsInHat){
+        var student = studentsInHat[s];
+    
+
+
+        html += "<tr>\n";
+        html += "\t<td class='studentID'>" + student.StudentID + "</td>\n";
+        html += "\t<td class='studentFName'>" + student.fName + "</td>\n";
+        html += "\t<td class='studentLName'>" + student.lName + "</td>\n";
+        html += "</tr>";
+    }
+       html += "</table>";
+    $("#divStudentTable").html(html);
+}
+
+function drawStudent(){
+    if(studentsInHat.length == 1){
+        $("#drawStudentButton").html("Reset List");
+        $("#drawStudentButton").attr("onclick", "resetList()");
+    }
+    var index = Math.floor(Math.random()*studentsInHat.length);
+    var ret = studentsInHat[index];
+
+    studentsInHat.splice(index, 1);
+    drawTable();
+    $("#pickedStudent").html(ret.fName + " " + ret.lName);
+    
+    $.ajax({
+        url: "/DrawStudent",
+        method: "POST",
+        data : {
+            StudentID : ret.StudentID,
+            ClassID : ClassID
+        },
+        success: function(response){console.log(response);},
+        error: function(err){console.log(err);}
+    });
+}
+
+function resetList(){
+    $.ajax({
+        url:"/ResetHat",
+        method: "POST",
+        data : {ClassID : ClassID},
+        success:function(response){
+            console.log(response);
+            // reset table
+        }, 
+        error: function(err) {console.log(err);}
+    });
+}
+    </script>
+</head>
+
+
+<body>
+
+<div id="NamePicker">
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">TeacherHelperNet</a>
+        </div>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="/">Home</a></li>
+          <li><a href="#">Page 1</a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="/Account">Account Settings</a></li>
+            <li><a href="/Logout"><!--<span class="glyphicon glyphicon log-out"></span> -->Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+
+    <div class="container-fluid">
+        <div class="col-sm-4"><h3>Name Picker</h3></div>
+        <div class="col-sm-4"><h3 id="h3ClassName"></h3></div> 
+        <div class="col-sm-4">
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="col-sm-6">
+            <div id="divStudentTable">
+                <table id = "studentTable" class="table">
+                </table>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div class="col-xs-6">
+                <div id="drawStudentButton" class="btn btn-primary btn-block" onclick="drawStudent()">Draw Name</div>
+            </div>
+            <div class="col-xs-6">
+                <div class="btn btn-primary btn-block" onclick="resetList()">Reset List</div>
+            </div>
+            <div class="col-xs-12">
+                <h1 id="pickedStudent"></h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

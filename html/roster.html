@@ -1,0 +1,113 @@
+<html>
+<head>
+	<script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css" />
+    <script src = "js/roster.js"></script>
+
+    <script>
+
+$(document).ready(function(){
+    loadPage();
+});
+
+
+var ClassID = window.location.href.split("ClassID=").pop();
+
+function loadPage(){
+    console.log(ClassID);
+
+    $.ajax({
+        url: "/GetClasses",
+        method:"GET",
+        success: function(response) {
+            var classes = response;
+            for (var c in classes){
+                var cl = classes[c];
+
+                if (cl.ClassID == ClassID) {
+                    $("#h3ClassName").html(cl.Name);
+                }
+            }
+        },
+        error: function(err) {
+            console.log(err);
+        }
+    });
+
+
+    $.ajax({
+        url: "/GetStudentsByClass",
+        method: "POST",
+        data: {"ClassID" : ClassID},
+        success: function(response) {
+            drawTable(response);
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    
+    });
+
+}
+
+function drawTable(students){
+    var html = "<table id='studentTable' class='table'><th>StudentID</th><th>First Name</th><th>Last Name</th><th>Talkative?</th><th>Nearsighted?</th></th>";
+    for (var s in students){
+        var student = students[s];
+
+        html += "<tr>\n";
+        html += "\t<td class='studentID'>" + student.StudentID + "</td>\n";
+        html += "\t<td class='studentFName'>" + student.fName + "</td>\n";
+        html += "\t<td class='studentLName'>" + student.lName + "</td>\n";
+        html += "\t<td class='studentIsTalkative'>" + student.isTalkative + "</td>\n";
+        html += "\t<td class='studentIsNearsighted'>" + student.isNearsighted + "</td>\n";
+        html += "</tr>";
+    }
+       html += "</table>";
+    $("#divStudentTable").html(html);
+}
+
+    </script>
+</head>
+
+
+<body>
+
+<div id="Roster">
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">TeacherHelperNet</a>
+        </div>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="/">Home</a></li>
+          <li><a href="#">Page 1</a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="/Account">Account Settings</a></li>
+            <li><a href="/Logout"><!--<span class="glyphicon glyphicon log-out"></span> -->Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+
+    <div class="container-fluid">
+        <div class="col-sm-4"><h3>Roster</h3></div>
+        <div class="col-sm-4"><h3 id="h3ClassName"></h3></div> 
+        <div class="col-sm-4">
+            <div id="mainEditButton" class="btn btn-warning" onclick="editButton()">Edit</div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div id="divStudentTable">
+            <table id = "studentTable" class="table">
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
