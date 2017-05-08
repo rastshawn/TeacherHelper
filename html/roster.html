@@ -42,7 +42,7 @@ function loadPage(){
         method: "POST",
         data: {"ClassID" : ClassID},
         success: function(response) {
-            drawTable(response);
+            getNotes(response);
         }, 
         error: function(err) {
             console.log(err);
@@ -52,8 +52,63 @@ function loadPage(){
 
 }
 
+function getNotes(students){
+    
+    var numStudents = students.length;
+    var numLoaded = 0;
+    var returnArray = [];
+
+
+    for (var s in students) {
+        var data = {
+            "StudentID" : students[s].StudentID
+        };
+        
+        $.ajax({
+            url: "/GetTeacherStudentNotes",
+            method:"POST",
+            data : data,
+            success: function(response){
+                response = response[0];
+                numLoaded++;
+                console.log(response);
+                if (!response.notes){
+                    response.notes = "";
+                }
+                if (!response.isTalkative) {
+                    response.isTalkative = false;
+                }
+                if (!response.isNearsighted) {
+                    response.isNearsighted = false;
+                }
+
+                var newStudent = {
+                    "StudentID" : response.StudentID,
+                    "fName" : response.fName,
+                    "lName" : response.lName,
+                    "isNearsighted" : response.isNearsighted,
+                    "isTalkative": response.isTalkative,
+                    "notes": response.notes
+                };
+
+                returnArray.push(newStudent);
+                
+                if (numLoaded == numStudents) {
+                    console.log(returnArray);
+                    drawTable(returnArray);
+                }
+            },
+            error: function(err) {
+                console.log(err);
+            }
+        });
+    }
+
+
+}
+
 function drawTable(students){
-    var html = "<table id='studentTable' class='table'><th>StudentID</th><th>First Name</th><th>Last Name</th><th>Talkative?</th><th>Nearsighted?</th></th>";
+    var html = "<table id='studentTable' class='table'><th>StudentID</th><th>First Name</th><th>Last Name</th><th>Talkative?</th><th>Nearsighted?</th><th>Notes</th>";
     for (var s in students){
         var student = students[s];
 
@@ -63,6 +118,7 @@ function drawTable(students){
         html += "\t<td class='studentLName'>" + student.lName + "</td>\n";
         html += "\t<td class='studentIsTalkative'>" + student.isTalkative + "</td>\n";
         html += "\t<td class='studentIsNearsighted'>" + student.isNearsighted + "</td>\n";
+        html += "\t<td class='studentNotes'>" + student.notes + "</td>\n";
         html += "</tr>";
     }
        html += "</table>";
@@ -96,7 +152,10 @@ function drawTable(students){
     <div class="container-fluid">
         <div class="col-sm-4"><h3>Roster</h3></div>
         <div class="col-sm-4"><h3 id="h3ClassName"></h3></div> 
-        <div class="col-sm-4">
+        <div class="col-sm-2">
+            <div id="addNewButton" class="btn btn-primary" onclick="addNewButton()">Add new student</div>
+        </div>
+        <div class="col-sm-2">
             <div id="mainEditButton" class="btn btn-warning" onclick="editButton()">Edit</div>
         </div>
     </div>

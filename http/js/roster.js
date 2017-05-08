@@ -41,6 +41,34 @@ function deleteStudent(studentID, index) {
     //$(cells[index]).prop("disabled", true);
 }
 
+function addNewButton(){
+
+    var html = "Student ID: <input id='studentIDInput' /><br>";
+    html += "<button onclick='submitNewStudent()'>Submit</button>";
+
+
+    $("#divStudentTable").html(html);
+}
+
+function submitNewStudent() {
+    var StudentID = $("#studentIDInput").val();
+
+    $.ajax({
+        url : "/AddStudentToClass",
+        method: "POST",
+        data: {
+            "StudentID" : StudentID,
+            "ClassID" : ClassID
+        },
+        success: function(response) {
+            location.reload();
+        },
+        error: function(err) {
+            console.log(err);
+        }
+    });
+}
+
 function editStudent(studentID, index) {
 
 
@@ -51,6 +79,8 @@ function editStudent(studentID, index) {
 
 
 // change first name boxes
+
+/*
         var t = $($(".studentFName")[index]);
         var inputHTML = "<input id='fName" + t.parent().prop("StudentID") + 
             "'  value = '" + t.html() + "'/> \n";
@@ -62,8 +92,8 @@ function editStudent(studentID, index) {
             "'  value = '" + t.html() + "'/> \n";
 
         t.html(inputHTML);
-
-        t = $($(".studentIsTalkative")[index]);
+*/
+        var t = $($(".studentIsTalkative")[index]);
         var checked = "checked";
         if (t.html() == "false") checked = "";
         var inputHTML = "<input type='checkbox' id='isTalkative" + t.parent().prop("StudentID") + 
@@ -81,7 +111,11 @@ function editStudent(studentID, index) {
 
         t.html(inputHTML);
 
+        t = $($(".studentNotes")[index]);
+        var inputHTML = "<input id='notes" + t.parent().prop("StudentID") +
+            "' value = '" + t.html() + "'/> \n";
 
+        t.html(inputHTML);
 }
 
 function submitEdits(){
@@ -91,13 +125,12 @@ function submitEdits(){
         
         var StudentID = $($(".studentID")[change.index]).
             parent().prop("StudentID");
-        var fName = $("#fName" + StudentID).val();
-        var lName = $("#lName" + StudentID).val();
         var isTalkative = $("#isTalkative" + StudentID).prop("checked");
         var isNearsighted = $("#isNearsighted" + StudentID).prop("checked");
+        var notes = $("#notes" + StudentID).val();
 
         if (change.type == "edit"){
-            var student = { StudentID : StudentID, fName : fName, lName : lName, isTalkative : isTalkative, isNearsighted : isNearsighted, action : "edit"};
+            var student = { StudentID : StudentID, isTalkative : isTalkative, isNearsighted : isNearsighted, notes : notes, action : "edit"};
         } else {
             var student = { StudentID : StudentID, action : "remove" };
         }

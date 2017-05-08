@@ -24,7 +24,7 @@ function editClass(){
             '\t<div class="col-sm-3"></div>\n' +
             '\t<div class="col-sm-6">\n' +
                 '\t\t<div class="btn btn-primary rosterButton" ' +
-					'onclick="createClass()">\n' +
+					'onclick="showNewClassForm(\'button\')">\n' +
                     '\t\t\t<h4 class="rosterButtonText">Create New Class' +
 					' </h4>\n' +
                 '\t\t</div>\n' +
@@ -91,21 +91,94 @@ function loadRoster() {
 
 function deleteClass() {
     // call api, try to delete class
+    
 }
 
 function changeTeacher() {
     // create id field, submit button
     var html = '<div class="col-xs-8"><h4>Enter username of new teacher:</h4>' +
-        '<input id="teacherID" /></div>' + 
-        '<div class="col-xs-4"><div class="btn btn-danger"' + 
+        '<input id="teacherUsername" /></div>' + 
+        '<div class="col-xs-4"><div id="changeTeacherSubmitButton" ' + 
+        'class="btn btn-danger"' + 
         ' onclick="sendNewTeacher()">Submit</div>';
     $("#changeTeacher").parent().html(html);
 }
 
 function sendNewTeacher() {
     // contact api
-    var teacherID = $("#teacherID").val();
-    console.log(teacherID);
+
+    var username = $("#teacherUsername").val();
+    var ClassID = classes[$("#selectClasses").val()].ClassID; 
+    $.ajax({
+        url: "/ChangeTeacher",
+        method: "POST",
+        data : {
+            "username" : username,
+            "ClassID" : ClassID
+        },
+        success: function(response){
+            console.log(response);
+            $("#changeTeacherSubmitButton").html("Success!");
+            $("#changeTeacherSubmitButton").removeClass("btn-danger");
+            $("#changeTeacherSubmitButton").addClass("btn-success");
+        },
+        error: function(err) {
+            console.log(err);
+        }
+    });
 }
 
+function showNewClassForm(source){
 
+    $("#MyClasses").html("");
+
+    var html = "";
+
+    if (source == "button") {
+        // do nothing
+    } else {
+        html += "<div class='container-fluid'>\n";
+        html += "<p>It looks like you don't have any classes.";
+        html += " Use the form below to add one!</p>";
+        html += "</div>"
+    }
+
+    html += "<div class='container-fluid'>";
+
+    html += "<form>";
+    html += "\t<div class='form-group'>\n";
+    html += "\t\t<label for='newClassName'>Class Name:</label>\n"
+    html += "\t\t<input id='newClassName' class='form-control' />\n";
+    html += "\t</div>\n";
+
+    html += "\t<div id='btnSubmitNewClass' class='btn btn-primary' ";
+    html += "onclick='submitNewClass()'>Submit</div>";
+    html += "</form>";
+
+
+    html += "</div>";
+
+    $("#MyClasses").html(html);
+
+}
+
+function submitNewClass(){
+
+    var className = $("#newClassName").val();
+    
+    $.ajax({
+        url: "/AddClass",
+        method: "post",
+        data: {
+            "className" : className
+        },
+        success: function(response) {
+            // TODO actually write
+            console.log(response);
+        },
+        error: function(err){
+            console.log(err);
+        }
+    });
+
+}

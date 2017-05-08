@@ -27,7 +27,9 @@ app.use(session({secret : 'secret'}));
 
 // from http://stackoverflow.com/questions/18310394/no-access-control-allow-origin-node-apache-port-issue
 
+// TODO check if this section is necessary.
 // Add headers
+
 app.use(function (req, res, next) {
 
     // Website you wish to allow to connect
@@ -46,6 +48,12 @@ app.use(function (req, res, next) {
     // Pass to next layer of middleware
     next();
 });
+
+// end section to check
+
+
+
+// Non-routing functions
 
 function getPreData(spName){
 	var ret = '<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body><';
@@ -67,8 +75,12 @@ function getResponseData(body){
 	return JSON.parse(body.split('<')[0]); 
 }
 
-var sess;
+// routing functions
 
+var sess; // global variable for storing session. 
+
+
+// Get request to '/', renders login or homepage
 app.get('/', function (req, res) {
 	sess = req.session;
 
@@ -298,40 +310,106 @@ app.post('/GetStudentsByClass', function(req, res) {
 
 app.post('/UpdateRoster', function(req, res) {
 
+    sess = req.session;
+    // TODO make app check for login / access to class
+
+    var TeacherID = sess.TeacherID;
     var classID = req.body.ClassID;
     var edits = req.body.students;
-    
+
+   
     for (var e in edits) {
-        var edit = edits[e];
-        if (edit.action=="edit") {
-            editStudent(edit, classID);
+        var student = edits[e];
+        if (student.action=="edit") {
+            console.log("edit");
+            console.log(student);
+
+            if (!student.isNearsighted) {
+                student.isNearsighted = false;
+            }
+
+            if (!student.isTalkative) {
+                student.isTalkative = false;
+            }
+
+
+            var data = getPreData('SetTeacherStudentNotes');
+            data += '<TeacherID>' + TeacherID + '</TeacherID>';
+            data += '<StudentID>' + student.StudentID + '</StudentID>';
+            data += '<isNearsighted>' + student.isNearsighted + '</isNearsighted>';
+            data += '<isTalkative>' + student.isTalkative + '</isTalkative>';
+            data += '<notes>' + student.notes + '</notes>';
+            data += getPostData('SetTeacherStudentNotes');
+            request.post({
+                url : apiurl,
+                headers : {
+                    "Content-Type": "application/soap+xml; charset=utf-8"
+                },
+                body : data
+            }, function callback(err, httpResponse, body) {
+            if (err) {
+                console.log(err);
+                //res.send("there was an error processing the request.");
+            } else {
+            
+                var response = getResponseData(body);
+                console.log(response);
+                //res.send(response);
+                /////DO SOMETHING WITH DATA
+            }
+            });
+
+
+
         } else {
-            removeStudent(edit.StudentID, classID);
+            var StudentID = student.StudentID;
+        
+            console.log("delete " + StudentID + " from " + classID);
+
+
+            var data = getPreData('RemoveStudentFromClass');
+            data += '<StudentID>' + StudentID + '</StudentID>';
+            data += '<ClassID>' + classID + '</ClassID>';
+            data += getPostData('RemoveStudentFromClass');
+            request.post({
+                url : apiurl,
+                headers : {
+                    "Content-Type": "application/soap+xml; charset=utf-8"
+                },
+                body : data
+            }, function callback(err, httpResponse, body) {
+            if (err) {
+                console.log(err);
+                //res.send("there was an error processing the request.");
+            } else {
+                
+                var response = getResponseData(body);
+                //res.send(response);
+                console.log(response);
+                /////DO SOMETHING WITH DATA
+            }
+            });
+
+
         }
     }
-    res.send("Success!");
+    res.send("Success!"); // TODO figure out
 
 });
 
-function editStudent(student, classID){
-    console.log("edit");
-    console.log(student);
-}
-function removeStudent(StudentID, classID){
-    console.log("delete " + StudentID + " from " + classID);
-}
-
-app.post('/GetStudentsInHat', function(req, res) {
+app.post('/AddStudentToClass', function(req, res) {
+    // TODO check to see if teacher has access
     sess = req.session;
-    // check if logged in
+    
+    var TeacherID = sess.TeacherID;
+    
+    var StudentID = req.body.StudentID;
+    var ClassID = req.body.ClassID;
 
-
-    // check if class is one owned by teacher
- 	var TeacherID = sess.TeacherID;
-
-    var data = getPreData('GetClassesByTeacher');
-    data += '<TeacherID>' + TeacherID + '</TeacherID>';
-    data += getPostData('GetClassesByTeacher');
+    var data = getPreData('AddStudentToClass');
+    data += '<ClassID>' + ClassID + '</ClassID>';
+    data += '<StudentID>' + StudentID + '</StudentID>';
+    data += getPostData('AddStudentToClass');
     request.post({
         url : apiurl,
         headers : {
@@ -343,45 +421,149 @@ app.post('/GetStudentsInHat', function(req, res) {
         console.log(err);
         res.send("there was an error processing the request.");
     } else {
-        var classes = getResponseData(body);
-        var ClassID = req.body.ClassID;
-        
-        var hasAccess = false;
-        for (var c in classes) {
-            if (ClassID == classes[c].ClassID)
-                hasAccess = true;
-        }
 
+        var response = getResponseData(body);
+        console.log(response);
+        res.send(response);
         /////DO SOMETHING WITH DATA
-        if (hasAccess){
-            
-            var data = getPreData('GetNamesInHat');
-            data += '<ClassID>' + ClassID + '</ClassID>';
-            data += getPostData('GetNamesInHat');
-            request.post({
-                url : apiurl,
-                headers : {
-                    "Content-Type": "application/soap+xml; charset=utf-8"
-                },
-                body : data
-            }, function callback(err, httpResponse, body) {
-            if (err) {
-                console.log(err);
-                res.send("there was an error processing the request.");
-            } else {
-                
-                var response = getResponseData(body);
-                res.send(response);
-                /////DO SOMETHING WITH DATA
-            }
-            });
-
-        } else {
-            res.send("You don't have access to this class.");
-        }
-
     }
-    });       
+    });
+
+
+});
+
+app.post('/GetTeacherStudentNotes', function(req, res){
+
+    sess = req.session;
+    
+    var TeacherID = sess.TeacherID;
+    var StudentID = req.body.StudentID;
+    console.log("Teacher: " + TeacherID + "\nStudentID: " + StudentID);
+    var data = getPreData('GetTeacherStudentNotes');
+    data += '<TeacherID>' + TeacherID + '</TeacherID>';
+    data += '<StudentID>' + StudentID + '</StudentID>';
+    data += getPostData('GetTeacherStudentNotes');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+
+        var response = getResponseData(body);
+        console.log(response);
+        res.send(response);
+        /////DO SOMETHING WITH DATA
+    }
+    });
+
+
+
+});
+
+
+// this is called when one of the edits on the roster page is made.
+function removeStudentFromClass(StudentID, classID){
+    console.log("delete " + StudentID + " from " + classID);
+
+
+    var data = getPreData('RemoveStudentFromClass');
+    data += '<TeacherID>' + TeacherID + '</TeacherID>';
+    data += '<StudentID>' + StudentID + '</StudentID>';
+    data += getPostData('RemoveStudentFromClass');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        
+        var response = getResponseData(body);
+        res.send(response);
+        /////DO SOMETHING WITH DATA
+    }
+    });
+
+
+
+}
+
+app.post('/GetStudentsInHat', function(req, res) {
+    sess = req.session;
+
+
+    if (sess.username){
+        
+        // check if class is one owned by teacher
+        var TeacherID = sess.TeacherID;
+
+        var data = getPreData('GetClassesByTeacher');
+        data += '<TeacherID>' + TeacherID + '</TeacherID>';
+        data += getPostData('GetClassesByTeacher');
+        request.post({
+            url : apiurl,
+            headers : {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body : data
+        }, function callback(err, httpResponse, body) {
+        if (err) {
+            console.log(err);
+            res.send("there was an error processing the request.");
+        } else {
+            var classes = getResponseData(body);
+            var ClassID = req.body.ClassID;
+            
+            var hasAccess = false;
+            for (var c in classes) {
+                if (ClassID == classes[c].ClassID)
+                    hasAccess = true;
+            }
+
+            /////DO SOMETHING WITH DATA
+            if (hasAccess){
+                
+                var data = getPreData('GetNamesInHat');
+                data += '<ClassID>' + ClassID + '</ClassID>';
+                data += getPostData('GetNamesInHat');
+                request.post({
+                    url : apiurl,
+                    headers : {
+                        "Content-Type": "application/soap+xml; charset=utf-8"
+                    },
+                    body : data
+                }, function callback(err, httpResponse, body) {
+                if (err) {
+                    console.log(err);
+                    res.send("there was an error processing the request.");
+                } else {
+                    
+                    var response = getResponseData(body);
+                    res.send(response);
+                    /////DO SOMETHING WITH DATA
+                }
+                });
+
+            } else {
+                res.send("You don't have access to this class.");
+            }
+
+        }
+        });       
+
+    } else {
+        res.send('You need to be logged in');
+    }
 
 });
 
@@ -466,4 +648,82 @@ app.post('/ResetHat', function(req, res) {
 		res.send(response);
 	}
 	});
+});
+
+app.post('/ChangeTeacher', function(req, res) {
+    sess = req.session;
+ 	var TeacherID = sess.TeacherID;
+    var newTeacherUsername = req.body.username;
+    var ClassID = req.body.ClassID;
+
+
+    var data = getPreData('GetClassesByTeacher');
+    data += '<TeacherID>' + TeacherID + '</TeacherID>';
+    data += getPostData('GetClassesByTeacher');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var classes = getResponseData(body);
+        
+        var hasAccess = false;
+        for (var c in classes) {
+            if (ClassID == classes[c].ClassID)
+                hasAccess = true;
+        }
+
+        if (hasAccess){
+        
+            // TODO make this actually change the teacher, 
+            // add proper stored procedure
+            
+            console.log("Class #" + ClassID + 
+                " will be taught by " + newTeacherUsername);
+            res.send("Success!");
+        } else {
+            res.send("You don't have access to this class.");
+        }
+
+    }
+    });       
+});
+
+app.post("/AddClass", function(req, res){
+
+    sess = req.session;
+    if (!sess.username){
+        res.send("You need to be logged in to do that.");
+    } else {
+
+        var Name = req.body.className;
+        var TeacherID = sess.TeacherID;
+    	var data = getPreData('AddUpdateDeleteClass');
+        data += '<Name>' + Name + '</Name>';
+        data += '<TeacherID>' + TeacherID + '</TeacherID>';
+        data += getPostData('AddUpdateDeleteClass');
+        request.post({
+            url : apiurl,
+            headers : {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body : data
+        }, function callback(err, httpResponse, body) {
+        if (err) {
+            console.log(err);
+            res.send("there was an error processing the request.");
+        } else {
+            var response = getResponseData(body);
+            res.send(response);
+        }
+        });
+        
+
+    }
 });

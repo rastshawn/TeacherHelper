@@ -103,6 +103,7 @@ function resetList(){
         data : {ClassID : ClassID},
         success:function(response){
             console.log(response);
+            location.reload();
             // reset table
         }, 
         error: function(err) {console.log(err);}
