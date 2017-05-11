@@ -1,0 +1,112 @@
+<html>
+<head>
+  <script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="jquery-ui.css" />
+    <script src = "js/attendance.js"></script>
+    <script src= "js/lib/jquery-ui.js"></script>
+
+<script>
+$(document).ready(function(){
+    $("#datePicker").datepicker();
+    $("#datePicker").change(setDate);
+});
+var ClassID = window.location.href.split("ClassID=").pop();
+function setDate() {
+	pageDate = new Date($("#datePicker").val());
+    pageDate = pageDate.toUTCString();
+}
+
+function getAssignments() {
+
+    $.ajax({
+        url : "/GetAssignmentsByClass",
+        method: "POST",
+        data : {
+            "ClassID" : ClassID,
+        },
+        success: function(success) {
+            console.log(success);
+            var html = "<table>";
+            for (var a in success) {
+                var assignment = success[a];
+
+                html += "<tr>";
+                html += "<td>" + assignment.AssignmentName + "</td>";
+                html += "<td>" + assignment.AssignmentID + "</td>";
+                html += "<td>" + assignment.AssignDate + "</td>";
+                html += "</tr>";
+                
+            }
+            html += "</table>";
+            $("#Assignments").html(html);
+        },
+        error: function(err) {console.log(err);}
+    });
+
+}
+
+function newAssignment() {
+    var AssignmentName = $("#AssignmentName").val();
+    var AssignDate = pageDate;
+
+    $.ajax({
+        url: "/AddAssignment",
+        method: "POST",
+        data: {
+            "AssignmentName" : AssignmentName,
+            "AssignDate" : AssignDate,
+            "ClassID" : ClassID
+        },
+        success: function(response) {
+            console.log(response);
+        },
+        error: function(err){console.log(err);}
+    });
+
+}
+
+function deleteAssignment() {
+    var AssignmentID = $("#AssignmentID").val();
+
+    $.ajax({
+        url: "/DeleteAssignment",
+        method: "POST",
+        data : {
+            "AssignmentID" : AssignmentID
+        },
+        success: function(response) {
+            console.log(response);
+        },
+        error: function(err) {console.log(err);}
+    });
+}
+</script>
+
+<link rel = "stylesheet" href="bootstrap.min.css" />
+
+</head>
+
+<body>
+<button onclick="getAssignments()">Get Assignments</button>
+<div id="Assignments"></div>
+<div>
+    <p>Add a new assignment:</p>
+    <div>AssignmentName: <input id='AssignmentName'></div>
+    <div>DueDate: </div>
+    <input id='datePicker' />
+    <button onclick='newAssignment()'>Submit </button>
+</div>
+
+<br><br>
+<div>
+    <p>Get students marked absent:</p>
+    <input id="AssignmentID" />
+    <button onclick='deleteAssignment()'>Delete assignment</button>
+</div>
+
+
+</body>
+</html>

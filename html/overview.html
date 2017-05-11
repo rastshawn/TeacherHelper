@@ -1,0 +1,208 @@
+<html>
+<head>
+  <script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="jquery-ui.css" />
+    <script src = "js/attendance.js"></script>
+    <script src= "js/lib/jquery-ui.js"></script>
+
+<script>
+$(document).ready(function(){
+    $("#datePicker").datepicker();
+    $("#datePicker").change(setDate);
+});
+
+function setDate() {
+	pageDate = new Date($("#datePicker").val());
+    pageDate = pageDate.toUTCString();
+}
+
+function getAssignments() {
+    var StudentID = $("#studentID").val();
+    var d = pageDate;
+
+    $.ajax({
+        url : "/GetStudentAssignmentsByAssignDate",
+        method: "POST",
+        data : {
+            "StudentID" : StudentID,
+            "AssignDate" : d
+        },
+        success: function(success) {
+            var html = "<table class='table'>";
+            for (var a in success) {
+                var assignment = success[a];
+
+                html += "<tr>";
+                html += "<td>" + assignment.AssignmentName + "</td>";
+                html += "<td>" + assignment.AssignmentID + "</td>";
+                html += "<td>" + assignment.ClassID + "</td>";
+                html += "</tr>";
+                
+            }
+            html += "</table>";
+            $("#studentAssignments").html(html);
+        },
+        error: function(err) {console.log(err);}
+    });
+
+}
+
+function getStudentsMarkedAbsent() {
+    var d = pageDate;
+
+    $.ajax({
+        url : "/GetStudentsMarkedAbsent",
+        method: "POST",
+        data : {
+            "AssignDate" : d
+        },
+        success: function(success) {
+            var html = "<table class='table'>";
+            for (var a in success) {
+                var student = success[a];
+                html += "<tr>";
+                html += "<td>" + student.fName + "</td>"
+                html += "<td>" + student.lName + "</td>";
+                html += "</tr>";
+            }
+
+            html += "</table>";
+            $("#absentStudents").html(html);
+        },
+        error: function(err) {console.log(err);}
+    });
+
+}
+
+function getStudentsTemporarilyAbsent() {
+
+    $.ajax({
+        url : "/GetStudentsTemporarilyAbsent",
+        method: "POST",
+        data : {
+        },
+        success: function(success) {
+             var html = "<table class='table'>";
+            for (var a in success) {
+                var student = success[a];
+                html += "<tr>";
+                html += "<td>" + student.fName + "</td>"
+                html += "<td>" + student.lName + "</td>";
+                html += "</tr>";
+            }
+
+            html += "</table>";          
+            $("#temporarilyAbsentStudents").html(html);
+        },
+        error: function(err) {console.log(err);}
+    });
+
+}
+
+function getStudentsWithPerfectAttendance() {
+
+    $.ajax({
+        url : "/GetStudentsWithPerfectAttendance",
+        method: "POST",
+        data : {
+        },
+        success: function(success) {
+            var html = "<table class='table'>";
+            for (var a in success) {
+                var student = success[a];
+                html += "<tr>";
+                html += "<td>" + student.fName + "</td>"
+                html += "<td>" + student.lName + "</td>";
+                html += "</tr>";
+            }
+
+            html += "</table>";
+
+            $("#perfectAttendance").html(html);
+        },
+        error: function(err) {console.log(err);}
+    });
+
+}
+
+
+function getAbsencesRank() {
+
+    $.ajax({
+        url : "/GetAbsencesRank",
+        method: "POST",
+        data : {
+        },
+        success: function(success) {
+            var html = "<table class='table'>";
+            for (var a in success) {
+                var student = success[a];
+                html += "<tr>";
+                html += "<td>" + student.numAbsent + "</td>";
+                html += "<td>" + student.fName + "</td>"
+                html += "<td>" + student.lName + "</td>";
+                html += "</tr>";
+            }
+
+            html += "</table>";
+            $("#absentRank").html(html);
+        },
+        error: function(err) {console.log(err);}
+    });
+
+}
+
+
+</script>
+
+<link rel = "stylesheet" href="bootstrap.min.css" />
+
+</head>
+
+<body>
+<div class="container-fluid">
+<div>
+    <p>Get all assignments for a student on a given day:</p>
+    <div>StudentID: <input id='studentID'></div>
+    <div>Date: </div>
+    <input id='datePicker' />
+    <button onclick='getAssignments()'>Get assignments </button>
+    <div id='studentAssignments'></div>
+</div>
+
+<br><br>
+<div>
+    <p>Get students marked absent:</p>
+    <button onclick='getStudentsMarkedAbsent()'>Get absences </button>
+    <div id='studentAssignments'></div>
+</div>
+
+<br><br>
+<div>
+    <p>Get all students with perfect attendance</p>
+    <button onclick='getStudentsWithPerfectAttendance()'>Get attendance </button>
+    <div id='perfectAttendance'></div>
+</div>
+
+<br><br>
+<div>
+    <p>Get students present for only part of the day</p>
+    <button onclick='getStudentsTemporarilyAbsent()'>Get absences </button>
+    <div id='temporarilyAbsentStudents'></div>
+</div>
+
+
+<br><br>
+<div>
+    <p>Get number of absences per student</p>
+    <button onclick='getAbsencesRank()'>Get list </button>
+    <div id='absentRank'></div>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -29,9 +29,13 @@ function loadPage(){
                 options += "<option value='" + c + "'>" + classes[c].Name +
                     '</option>';
             }
-
-            $("#selectClasses").html(options);
-            loadClass();
+            if (options == "") {
+                showNewClassForm("no classes");
+            } else {
+    
+                $("#selectClasses").html(options);
+                loadClass();
+            }
         }, 
         error: function(err) {
             console.log(err);

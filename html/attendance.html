@@ -1,0 +1,221 @@
+<html>
+<head>
+	<script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css" />
+    <link rel="stylesheet" href="jquery-ui.css" />
+    <script src = "js/attendance.js"></script>
+    <script src= "js/lib/jquery-ui.js"></script>
+    <script>
+
+$(document).ready(function(){
+    $("#datePicker").datepicker();
+    $("#datePicker").change(setDate);
+    loadPage();
+});
+
+
+var ClassID = window.location.href.split("ClassID=").pop();
+var editMode = false;
+var pageDate;
+
+function loadPage(){
+    console.log(ClassID);
+
+    $.ajax({
+        url: "/GetClasses",
+        method:"GET",
+        success: function(response) {
+            var classes = response;
+            for (var c in classes){
+                var cl = classes[c];
+
+                if (cl.ClassID == ClassID) {
+                    $("#h3ClassName").html(cl.Name);
+                }
+            }
+        },
+        error: function(err) {
+            console.log(err);
+        }
+    });
+
+
+    $.ajax({
+        url: "/GetStudentsByClass",
+        method: "POST",
+        data: {"ClassID" : ClassID},
+        success: function(response) {
+            drawTable(response);
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    
+    });
+
+}
+
+function setDate() {
+    var d = $("#datePicker").val();
+    if (d != "") {
+        d = new Date(d);
+    } else {
+        d = new Date();
+        d = new Date(d.toDateString());
+    }
+
+    pageDate = d.toUTCString();
+    console.log(pageDate);
+}
+
+function loadAttendance() {
+
+    var d = pageDate;
+
+    $.ajax({
+        url : "/LoadAttendance",
+        method: "POST",
+        data: {
+            "Day" : d,
+            "ClassID" : ClassID
+        }, 
+        success: function(response) {
+            console.log(response);
+            for (var s in response) {
+                var student = response[s];
+
+                var checked = "";
+                if (student.isPresent) checked += "checked";
+
+                var html = "<input type='checkbox' id='checkbox" + 
+                    student.StudentID + "' " + checked + "/>";
+
+                $("#check" + student.StudentID).html(html);
+        
+            }
+        
+        },
+        error: function(err) {
+            console.log(err);
+        }
+    });
+
+}
+
+function submitAttendance() {
+    
+    var d = pageDate;
+    var attendance = [];
+
+    var students = $(".presentCheck");
+    for (var s in students) {
+        if (s == "length") {
+            break;
+        }
+        var student = $(students[s]);
+        var StudentID = student.attr('id').split('check').pop();
+        var isPresent = $("#checkbox" + StudentID).prop("checked");
+
+        var obj = {
+            "StudentID" : StudentID,
+            "isPresent" : isPresent,
+            "Day" : d
+        };
+
+        attendance.push(obj);
+    }
+
+    $.ajax({
+        url : "/SubmitAttendance",
+        method: "POST",
+        data : {
+            "Records" : attendance,
+            "ClassID" : ClassID
+        }, 
+        success: function(response) {
+            console.log(response);
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    });
+
+}
+
+function drawTable(students){
+    var html = "<table id='studentTable' class='table'><th>Present?</th><th>StudentID</th><th>First Name</th><th>Last Name</th>";
+    for (var s in students){
+        var student = students[s];
+
+        html += "<tr>\n";
+        
+        html += "\t<td class='presentCheck' id='check" + student.StudentID + "'>";
+        html += "<input type='checkbox' id='checkbox" + student.StudentID;
+        html += "' checked /></td>";
+
+
+        html += "\t<td class='studentID'>" + student.StudentID + "</td>\n";
+        html += "\t<td class='studentFName'>" + student.fName + "</td>\n";
+        html += "\t<td class='studentLName'>" + student.lName + "</td>\n";
+        html += "</tr>";
+    }
+       html += "</table>";
+    $("#divStudentTable").html(html);
+
+    setDate();
+    loadAttendance(pageDate);
+}
+
+    </script>
+</head>
+
+
+<body>
+
+<div id="Attendance">
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">TeacherHelperNet</a>
+        </div>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="/">Home</a></li>
+          <li><a href="#">Page 1</a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="/Account">Account Settings</a></li>
+            <li><a href="/Logout"><!--<span class="glyphicon glyphicon log-out"></span> -->Logout</a></li>
+        </ul>
+      </div>
+    </nav>
+
+
+    <div class="container-fluid">
+        <div class="col-sm-4"><h3>Attendance</h3></div>
+        <div class="col-sm-4"><h3 id="h3ClassName"></h3></div> 
+        <div class="col-sm-2">
+            <div id="addNewButton" class="btn btn-primary" onclick="submitAttendance()">Submit Attendance</div>
+        </div>
+        <div class="col-sm-2">
+            <div id="mainEditButton" class="btn btn-warning" onclick="loadAttendance()">Load Attendance</div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div id="inputDiv">
+            <input id="datePicker" />
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div id="divStudentTable">
+            <table id = "studentTable" class="table">
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

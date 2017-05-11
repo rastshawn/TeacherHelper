@@ -75,6 +75,13 @@ function getResponseData(body){
 	return JSON.parse(body.split('<')[0]); 
 }
 
+
+app.listen(8080, function() {
+	console.log('backend running on port 8080');
+});
+
+
+
 // routing functions
 
 var sess; // global variable for storing session. 
@@ -121,6 +128,7 @@ app.post('/Login', function (req, res) {
             sess.username = req.body.username;
             sess.TeacherID = response.TeacherID;
             sess.fName = response.fName;
+            sess.lName = response.lName;
             res.send('Login successful');
         }
         else {
@@ -139,12 +147,195 @@ app.get('/logout', function(req, res) {
 });
 
 app.get('/GetUser', function(req, res) {
+    var user = {
+        "fName" : req.session.fName,
+        "lName" : req.session.lName,
+        "username" : req.session.username
+    };
+    res.send(user);	
+});
 
-    res.send(req.session.username);	
+app.get('/Account', function (req, res) {
+	sess = req.session;
+
+	if(sess.username) {
+		res.render('account.html');
+	}	
+	else {
+		res.render('login.html');
+	}
 });
-app.listen(8080, function() {
-	console.log('backend running on port 8080');
+
+app.get('/Attendance', function (req, res) {
+	sess = req.session;
+
+	if(sess.username) {
+		res.render('attendance.html');
+	}	
+	else {
+		res.render('login.html');
+	}
 });
+
+app.get('/Overview', function (req, res) {
+	sess = req.session;
+
+	if(sess.username) {
+		res.render('overview.html');
+	}	
+	else {
+		res.render('login.html');
+	}
+});
+
+
+
+app.get('/Assignments', function (req, res) {
+	sess = req.session;
+
+	if(sess.username) {
+		res.render('assignments.html');
+	}	
+	else {
+		res.render('login.html');
+	}
+});
+
+app.post('/AddAssignment', function(req, res) {
+    sess = req.session;
+
+    if (sess.username) {
+        var Name = req.body.AssignmentName;
+        var AssignDate = req.body.AssignDate;
+        var ClassID = req.body.ClassID;
+        var data = getPreData('AddAssignment');
+        data += '<AssignmentName>' + Name + '</AssignmentName>';
+        data += '<ClassID>' + ClassID + '</ClassID>';
+        data += '<AssignDate>' + AssignDate + '</AssignDate>';
+        data += getPostData('AddAssignment');
+        request.post({
+            url : apiurl,
+            headers : {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body : data
+        }, function callback(err, httpResponse, body) {
+        if (err) {
+            console.log(err);
+            res.send("there was an error processing the request.");
+        } else {
+            var response = getResponseData(body);
+            res.send(response);
+            /////DO SOMETHING WITH DATA
+        }
+        });
+           
+
+    }
+});
+
+
+
+app.post('/DeleteAssignment', function(req, res) {
+    sess = req.session;
+
+    if (sess.username) {
+        var AssignmentID = req.body.AssignmentID;
+        var data = getPreData('DeleteAssignment');
+        data += '<AssignmentID>' + AssignmentID + '</AssignmentID>';
+        data += getPostData('DeleteAssignment');
+        request.post({
+            url : apiurl,
+            headers : {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body : data
+        }, function callback(err, httpResponse, body) {
+        if (err) {
+            console.log(err);
+            res.send("there was an error processing the request.");
+        } else {
+            var response = getResponseData(body);
+            res.send(response);
+            /////DO SOMETHING WITH DATA
+        }
+        });
+           
+
+    }
+});
+
+
+app.post('/LoadAttendance', function(req, res) {
+	var Day = req.body.Day;
+    var ClassID = req.body.ClassID;
+	sess = req.session;
+	if (!sess.username) {
+		res.send('You need to be logged in to do that.');
+	}
+	var data = getPreData('GetAttendanceByClassAndDay');
+	data += '<ClassID>' + ClassID + '</ClassID>';
+	data += '<Day>' + Day + '</Day>';
+	data += getPostData('GetAttendanceByClassAndDay');
+	request.post({
+		url : apiurl,
+		headers : {
+			"Content-Type": "application/soap+xml; charset=utf-8"
+		},
+		body : data
+	}, function callback(err, httpResponse, body) {
+	if (err) {
+		console.log(err);
+		res.send("there was an error processing the request.");
+	} else {
+        var response = getResponseData(body);
+        res.send(response);
+        /////DO SOMETHING WITH DATA
+	}
+	});
+});
+
+
+
+app.post('/SubmitAttendance', function(req, res) {
+	var ClassID = req.body.ClassID;
+    var records = req.body.Records;
+    sess = req.session;
+    
+	if (!sess.username) {
+		res.send('You need to be logged in to do that.');
+	}
+
+    for (var r in records) {
+        var record = records[r];
+        var data = getPreData('AddUpdateAttendance');
+        data += '<AttendanceID>' + (0-1) + '</AttendanceID>';
+        data += '<StudentID>' + record.StudentID + '</StudentID>';
+        data += '<ClassID>' + ClassID + '</ClassID>';
+        data += '<Day>' + record.Day + '</Day>';
+        data += '<isPresent>' + record.isPresent + '</isPresent>';
+        data += getPostData('AddUpdateAttendance');
+        request.post({
+            url : apiurl,
+            headers : {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body : data
+        }, function callback(err, httpResponse, body) {
+        if (err) {
+            console.log(err);
+            res.send("there was an error processing the request.");
+        } else {
+            //var response = getResponseData(body);
+            //res.send(response);
+            /////DO SOMETHING WITH DATA
+        }
+        });
+    }
+    res.send("Success!");
+
+});
+
 
 
 
@@ -321,8 +512,6 @@ app.post('/UpdateRoster', function(req, res) {
     for (var e in edits) {
         var student = edits[e];
         if (student.action=="edit") {
-            console.log("edit");
-            console.log(student);
 
             if (!student.isNearsighted) {
                 student.isNearsighted = false;
@@ -353,7 +542,6 @@ app.post('/UpdateRoster', function(req, res) {
             } else {
             
                 var response = getResponseData(body);
-                console.log(response);
                 //res.send(response);
                 /////DO SOMETHING WITH DATA
             }
@@ -364,7 +552,6 @@ app.post('/UpdateRoster', function(req, res) {
         } else {
             var StudentID = student.StudentID;
         
-            console.log("delete " + StudentID + " from " + classID);
 
 
             var data = getPreData('RemoveStudentFromClass');
@@ -385,7 +572,6 @@ app.post('/UpdateRoster', function(req, res) {
                 
                 var response = getResponseData(body);
                 //res.send(response);
-                console.log(response);
                 /////DO SOMETHING WITH DATA
             }
             });
@@ -423,7 +609,6 @@ app.post('/AddStudentToClass', function(req, res) {
     } else {
 
         var response = getResponseData(body);
-        console.log(response);
         res.send(response);
         /////DO SOMETHING WITH DATA
     }
@@ -438,7 +623,6 @@ app.post('/GetTeacherStudentNotes', function(req, res){
     
     var TeacherID = sess.TeacherID;
     var StudentID = req.body.StudentID;
-    console.log("Teacher: " + TeacherID + "\nStudentID: " + StudentID);
     var data = getPreData('GetTeacherStudentNotes');
     data += '<TeacherID>' + TeacherID + '</TeacherID>';
     data += '<StudentID>' + StudentID + '</StudentID>';
@@ -456,7 +640,6 @@ app.post('/GetTeacherStudentNotes', function(req, res){
     } else {
 
         var response = getResponseData(body);
-        console.log(response);
         res.send(response);
         /////DO SOMETHING WITH DATA
     }
@@ -684,8 +867,6 @@ app.post('/ChangeTeacher', function(req, res) {
             // TODO make this actually change the teacher, 
             // add proper stored procedure
             
-            console.log("Class #" + ClassID + 
-                " will be taught by " + newTeacherUsername);
             res.send("Success!");
         } else {
             res.send("You don't have access to this class.");
@@ -693,6 +874,40 @@ app.post('/ChangeTeacher', function(req, res) {
 
     }
     });       
+});
+
+app.post('/DeleteClass', function(req, res) {
+
+    sess = req.session;
+    //TODO check if teacher has access to this class
+
+    if (!sess.username){
+        res.send("You need to be logged in to do that.");
+    } else {
+
+    	var data = getPreData('AddUpdateDeleteClass');
+        data += '<ClassID>' + req.body.ClassID + '</ClassID>';
+        data += '<Name>' + 'asdf' + '</Name>';
+        data += '<delete>' + 'true' + '</delete>';
+        data += getPostData('AddUpdateDeleteClass');
+        request.post({
+            url : apiurl,
+            headers : {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body : data
+        }, function callback(err, httpResponse, body) {
+        if (err) {
+            console.log(err);
+            res.send("there was an error processing the request.");
+        } else {
+            var response = getResponseData(body);
+            res.send(response);
+        }
+        });
+        
+
+    }
 });
 
 app.post("/AddClass", function(req, res){
@@ -727,3 +942,264 @@ app.post("/AddClass", function(req, res){
 
     }
 });
+
+app.post('/AddTeacher', function(req, res) {
+    var username = req.body.username;
+    var password = req.body.password;
+    var fName = req.body.fName;
+    var lName = req.body.lName;
+
+    var data = getPreData('AddTeacher');
+    data += '<fName>' + fName + '</fName>';
+    data += '<lName>' + lName + '</lName>';
+    data += '<username>' + username + '</username>';
+    data += '<password>' + password + '</password>';
+    data += getPostData('AddTeacher');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+app.post('/DeleteAccount', function (req, res) {
+    
+    sess = req.session;
+
+    var data = getPreData('UpdateDeleteTeacher');
+    data += '<TeacherID>' + sess.TeacherID + '</TeacherID>';
+    data += '<fName>' + 'fname'+ '</fName>';
+    data += '<lName>' + 'lName' + '</lName>';
+    data += '<password>' + 'password' + '</password>';
+    data += '<delete>' + 'true' + '</delete>';
+    data += getPostData('UpdateDeleteTeacher');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+
+app.post('/UpdateAccount', function (req, res) {
+    
+    sess = req.session;
+    var fName = req.body.fName;
+    var lName = req.body.lName;
+    var password = req.body.password;
+
+
+    var data = getPreData('UpdateDeleteTeacher');
+    data += '<TeacherID>' + sess.TeacherID + '</TeacherID>';
+    data += '<fName>' + fName + '</fName>';
+    data += '<lName>' + lName + '</lName>';
+    data += '<password>' + password + '</password>';
+    data += '<delete>' + 'false' + '</delete>';
+    data += getPostData('UpdateDeleteTeacher');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+app.post('/GetAssignmentsByClass', function (req, res) {
+    
+    sess = req.session;
+    var ClassID = req.body.ClassID;
+
+    var data = getPreData('GetAssignmentsByClass');
+    data += '<ClassID>' + ClassID + '</ClassID>';
+    data += getPostData('GetAssignmentsByClass');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+
+
+
+app.post('/GetStudentAssignmentsByAssignDate', function (req, res) {
+    
+    sess = req.session;
+
+    var StudentID = req.body.StudentID;
+    var AssignDate = req.body.AssignDate;
+
+    var data = getPreData('GetStudentAssignmentsByAssignDate');
+    data += '<StudentID>' + StudentID + '</StudentID>';
+    data += '<AssignDate>' + AssignDate + '</AssignDate>';
+    data += getPostData('GetStudentAssignmentsByAssignDate');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+
+app.post('/GetStudentsMarkedAbsent', function (req, res) {
+    
+    sess = req.session;
+    var fName = req.body.fName;
+    var lName = req.body.lName;
+    var password = req.body.password;
+
+
+    var data = getPreData('GetStudentsMarkedAbsent');
+    data += '<Day>' + Day + '</Day>';
+    data += getPostData('GetStudentsMarkedAbsent');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+
+
+app.post('/GetStudentsTemporarilyAbsent', function (req, res) {
+    
+    sess = req.session;
+
+
+    var data = getPreData('GetStudentsTemporarilyAbsent');
+    data += getPostData('GetStudentsTemporarilyAbsent');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+app.post('/GetStudentsWithPerfectAttendance', function (req, res) {
+    
+    sess = req.session;
+
+
+    var data = getPreData('GetStudentsWithPerfectAttendance');
+    data += getPostData('GetStudentsWithPerfectAttendance');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+
+app.post('/GetAbsencesRank', function (req, res) {
+    
+    sess = req.session;
+
+
+    var data = getPreData('GetAbsencesRank');
+    data += getPostData('GetAbsencesRank');
+    request.post({
+        url : apiurl,
+        headers : {
+            "Content-Type": "application/soap+xml; charset=utf-8"
+        },
+        body : data
+    }, function callback(err, httpResponse, body) {
+    if (err) {
+        console.log(err);
+        res.send("there was an error processing the request.");
+    } else {
+        var response = getResponseData(body);
+        res.send(response);
+    }
+    });
+   
+});
+
+

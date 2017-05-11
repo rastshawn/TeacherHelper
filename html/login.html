@@ -26,6 +26,76 @@ function login() {
                 error: function(err) {console.log(err);}
         });	
 }
+
+function makeNewAccountForm() {
+    var html = "" +
+                '<div class="form-group">' +
+                '    <label for="fName">First Name:</label>' +
+                '    <input class="form-control" id="fName" />' +
+                '</div>' +
+                 '<div class="form-group">' +
+                '    <label for="lName">Last Name:</label>' +
+                '    <input class="form-control" id="lName" />' +
+                '</div>' +
+                '<div class="form-group">' +
+                '    <label for="username">Username:</label>' +
+                '    <input class="form-control" id="username" />' +
+                '</div>' +
+                '<div class="form-group">' +
+                '    <label for="password">Password:</label>' +
+                '    <input type="password" class="form-control" id="password" />' +
+                '</div>' +
+                 '<div class="form-group">' +
+                '    <label for="password2">Retype password:</label>' +
+                '    <input type="password" class="form-control" id="password2" />' +
+                '</div>' +               
+                '<div onclick="verify()" class="btn btn-default">Make Account</div>';
+
+    $("#loginForm").html(html);
+
+}
+
+function verify(){
+    var fName = $("#fName").val();
+    var lName = $("#lName").val();
+    var username = $("#username").val();
+
+    var password = $("#password").val();
+    var password2 = $("#password2").val();
+
+    // make sure all have something entered
+    var valid = true;
+
+    if (fName == "" || lName == "" || username == "" || password == "") {
+        $("#response").html("Fill out the entire form");
+        valid = false;
+    }
+
+    if (password != password2) {
+        $("#response").html("Passwords do not match");
+        valid = false;
+    }
+
+    if (valid) {
+        $.ajax({
+            url: "/AddTeacher",
+            method:"POST",
+            data : {
+                "fName" : fName,
+                "lName" : lName, 
+                "username" : username,
+                "password" : password
+            },
+            success: function(response) {
+                console.log(response);
+            },
+            error: function(err) {
+                console.log(err);
+            }
+        });
+    }
+
+}
 </script>
 
 <link rel = "stylesheet" href="bootstrap.min.css" />
@@ -36,7 +106,7 @@ function login() {
 
 	<div class="container">
         <div class="col-sm-12">
-            <form>
+            <form id='loginForm'>
                 <div class="form-group">
                     <label for="username">Username:</label>
                     <input class="form-control" id="username" />
@@ -45,7 +115,9 @@ function login() {
                     <label for="password">Password:</label>
                     <input type="password" class="form-control" id="password" />
                 </div>
-                <div onclick="login()" class="btn btn-default">Login</button>
+                <div onclick="login()" class="btn btn-default">Login</div>
+                
+                <div onclick="makeNewAccountForm()" class="btn btn-default">Sign up</div>
             </form>
         </div>
         

@@ -69,10 +69,12 @@ function submitEdits(oldClassName) {
 function loadAssignments() {
     // load the assignments page (get request?) and
     // send the current class number
+    window.location.href = "/Assignments?ClassID=" + classes[$("#selectClasses").val()].ClassID;
 }
 
 function loadAttendance() {
     // load attendance page, send current class number
+    window.location.href = "/Attendance?ClassID=" + classes[$("#selectClasses").val()].ClassID;
 }
 
 function loadNamePicker() {
@@ -91,7 +93,21 @@ function loadRoster() {
 
 function deleteClass() {
     // call api, try to delete class
-    
+    var ClassID = classes[$("#selectClasses").val()].ClassID;
+
+    $.ajax({
+        url: "/DeleteClass",
+        method:"POST",
+        data : {
+            "ClassID":ClassID
+        }, 
+        success: function(response){
+            window.location.href = '/';
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    });
 }
 
 function changeTeacher() {
@@ -174,6 +190,7 @@ function submitNewClass(){
         },
         success: function(response) {
             // TODO actually write
+            location.reload();
             console.log(response);
         },
         error: function(err){

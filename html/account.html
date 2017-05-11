@@ -1,0 +1,117 @@
+<html>
+<head>
+
+<script src = "js/lib/jquery.min.js"></script>
+<script src = "/js/lib/bootstrap.min.js"></script>
+<script>
+
+$(document).ready(loadPage);
+
+function loadPage() {
+    $.ajax({
+        url:"/GetUser",
+        success: function(response) {
+            $("#fName").val(response.fName);
+            $("#lName").val(response.lName);
+        }, 
+        error: function(err) {
+            console.log(err);
+        }
+    });
+
+}
+
+function deleteAccount() {
+
+        $.ajax({
+                url: "/DeleteAccount",
+                method: "POST",
+                success: function(response) {
+                    window.location.href="/";
+                },
+                error: function(err) {console.log(err);}
+        });	
+}
+
+
+function verify(){
+    var fName = $("#fName").val();
+    var lName = $("#lName").val();
+
+    var password = $("#password").val();
+    var password2 = $("#password2").val();
+
+    // make sure all have something entered
+    var valid = true;
+
+    if (fName == "" || lName == "" ||  password == "") {
+        $("#response").html("Fill out the entire form");
+        valid = false;
+    }
+
+    if (password != password2) {
+        $("#response").html("Passwords do not match");
+        valid = false;
+    }
+
+    if (valid) {
+        $.ajax({
+            url: "/UpdateAccount",
+            method:"POST",
+            data : {
+                "fName" : fName,
+                "lName" : lName, 
+                "password" : password
+            },
+            success: function(response) {
+                console.log(response);
+                window.location.href="/logout";
+            },
+            error: function(err) {
+                console.log(err);
+            }
+        });
+    }
+
+}
+</script>
+
+<link rel = "stylesheet" href="bootstrap.min.css" />
+
+</head>
+
+<body>
+
+	<div class="container">
+        <div class="col-sm-12">
+            <form id="loginForm">
+                <div class="form-group">    
+                    <label for="fName">First Name:</label>    
+                    <input class="form-control" id="fName">
+                </div>
+                <div class="form-group">    
+                    <label for="lName">Last Name:</label>    
+                    <input class="form-control" id="lName">
+                </div>
+                <div class="form-group">    
+                    <label for="password">Password:</label>    
+                    <input type="password" class="form-control" id="password">
+                </div>
+                <div class="form-group">    
+                    <label for="password2">Retype password:</label>    
+                    <input type="password" class="form-control" id="password2">
+                </div>
+                <div onclick="verify()" class="btn btn-default">Submit Changes</div>
+                <div onclick="deleteAccount()" class="btn btn-danger">Delete account</div>
+            </form>
+        </div>
+        <div class="col-sm-12">
+            <div id="response"></div>
+        </div>
+	</div>
+
+
+
+
+</body>
+</html>
