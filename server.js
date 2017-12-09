@@ -16,6 +16,8 @@ var session = require('express-session');
 var app = express();
 var bodyParser = require('body-parser');
 
+var sql = require('mssql');
+var account = require('./account');
 
 app.use(bodyParser.urlencoded());
 app.use(express.static('http'));
@@ -23,6 +25,45 @@ app.set('views', __dirname + '/html');
 app.engine('html', require('ejs').renderFile);
 app.use(session({secret : 'secret'}));
 
+
+
+function getResults(query, callback) {
+		sql.connect(account.config, function() {
+			var request = new sql.Request();
+			request.query(query, function(err, records){
+				if (err) console.log(err);
+				else callback(records);
+			}
+		});
+}
+
+var Parameter = new function(name, type, value){
+	this.name = name;
+	this.type = type;
+	this.value = value;
+}
+
+function execProcedure(procedure, params,/* type, */callback) {
+		// procedure: string containing procedure name
+		// params: array of parameter objects:
+		// {
+		// 	name: "string",
+		//	type: sql.Int, sql.VarChar(50),
+		//	value: val
+		// }
+		
+		var request = new sql.Request();
+		
+		for (int i = 0; i<params.length; i++) {
+			request.input(params[i].name, params[i].type, params[i].value);
+		}
+		
+		// maybe include request.type here
+		request.execute(procedure, function(err, result) {
+			if (err) console.log(err);
+			else callback(result);
+		});
+}
 
 
 // from http://stackoverflow.com/questions/18310394/no-access-control-allow-origin-node-apache-port-issue
@@ -110,7 +151,15 @@ app.post('/Login', function (req, res) {
 
 	var data = getPreData('Login') + "<username>" + username + "</username><password>" + password + "</password>" + getPostData('Login');	 
 
-
+	var usernameParam = new Parameter("username", sql.VarChar(30), username);
+	var passwordParam = new Parameter("password", sql.VarChar(30), password);
+	
+	var params = [usernameParam, passwordParam];
+	
+	execProcedure('Login', params, function(response){
+		console.log(response);
+	});
+/*
 	request.post({
 		url:apiurl, 
 		headers : {
@@ -136,6 +185,7 @@ app.post('/Login', function (req, res) {
         }
 	}
 	});
+	* */
 });
 
 
