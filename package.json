@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://gitlab.com/rastshawn/TeacherHelper/issues"
   },
-  "homepage": "https://gitlab.com/rastshawn/TeacherHelper#README"
+  "homepage": "https://gitlab.com/rastshawn/TeacherHelper#README",
+  "dependencies": {
+    "mssql": "^4.1.0"
+  }
 }
