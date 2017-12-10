@@ -1,3 +1,4 @@
+"use strict";
 /////////////////////////////////////////////////// Server
 /*
 var connect = require('connect');
