@@ -7,7 +7,7 @@ connect().use(serveStatic(__dirname + "/http")).listen(3000, function(){
 });
 */
 var apiurl = "http://ec2-54-69-225-248.us-west-2.compute.amazonaws.com/TeacherHelperNET/WebService.asmx";
-
+let PORT = 3511;
 /////////////////////////////////////////////////// Backend
 
 var request = require('request');
@@ -33,11 +33,11 @@ function getResults(query, callback) {
 			request.query(query, function(err, records){
 				if (err) console.log(err);
 				else callback(records);
-			}
+			})
 		});
 }
 
-var Parameter = new function(name, type, value){
+var Parameter = function(name, type, value){
 	this.name = name;
 	this.type = type;
 	this.value = value;
@@ -51,17 +51,18 @@ function execProcedure(procedure, params,/* type, */callback) {
 		//	type: sql.Int, sql.VarChar(50),
 		//	value: val
 		// }
-		
-		var request = new sql.Request();
-		
-		for (int i = 0; i<params.length; i++) {
-			request.input(params[i].name, params[i].type, params[i].value);
-		}
-		
-		// maybe include request.type here
-		request.execute(procedure, function(err, result) {
-			if (err) console.log(err);
-			else callback(result);
+		sql.connect(account.config, function() {
+			var request = new sql.Request();
+			
+			for (int i = 0; i<params.length; i++) {
+				request.input(params[i].name, params[i].type, params[i].value);
+			}
+			
+			// maybe include request.type here
+			request.execute(procedure, function(err, result) {
+				if (err) console.log(err);
+				else callback(result);
+			});
 		});
 }
 
@@ -117,8 +118,8 @@ function getResponseData(body){
 }
 
 
-app.listen(8080, function() {
-	console.log('backend running on port 8080');
+app.listen(PORT, function() {
+	console.log('backend running on port ' + PORT);
 });
 
 
