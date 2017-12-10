@@ -44,6 +44,10 @@ var Parameter = function(name, type, value){
 	this.value = value;
 }
 
+sql.connect(account.config, function() {
+	
+});
+
 function execProcedure(procedure, params,/* type, */callback) {
 		// procedure: string containing procedure name
 		// params: array of parameter objects:
@@ -52,7 +56,7 @@ function execProcedure(procedure, params,/* type, */callback) {
 		//	type: sql.Int, sql.VarChar(50),
 		//	value: val
 		// }
-		sql.connect(account.config, function() {
+		//sql.connect(account.config, function() {
 			var request = new sql.Request();
 			
 			for (int i = 0; i<params.length; i++) {
@@ -64,7 +68,7 @@ function execProcedure(procedure, params,/* type, */callback) {
 				if (err) console.log(err);
 				else callback(result);
 			});
-		});
+		//});
 }
 
 
