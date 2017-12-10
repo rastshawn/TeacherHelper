@@ -1000,11 +1000,18 @@ app.post("/AddClass", function(req, res){
 });
 
 app.post('/AddTeacher', function(req, res) {
-    var username = req.body.username;
-    var password = req.body.password;
-    var fName = req.body.fName;
-    var lName = req.body.lName;
-
+    var username = new Parameter("username", sql.VarChar(30), req.body.username);
+    var password = new Parameter("password", sql.VarChar(30), req.body.password);
+    var fName = new Parameter("fName", sql.VarChar(30), req.body.fName);
+    var lName = new Parameter("lName", sql.VarChar(30), req.body.lName);
+    var params = [
+		username, 
+		password, 
+		fName, 
+		lName
+    ];
+    
+	/*
     var data = getPreData('AddTeacher');
     data += '<fName>' + fName + '</fName>';
     data += '<lName>' + lName + '</lName>';
@@ -1026,7 +1033,10 @@ app.post('/AddTeacher', function(req, res) {
         res.send(response);
     }
     });
-   
+   */
+	execProcedure('spAddTeacher', params, function(response) {
+	   console.log(response);
+    });
 });
 
 app.post('/DeleteAccount', function (req, res) {
