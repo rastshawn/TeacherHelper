@@ -29,13 +29,13 @@ app.use(session({secret : 'secret'}));
 
 
 function getResults(query, callback) {
-		sql.connect(account.config, function() {
-			var request = new sql.Request();
-			request.query(query, function(err, records){
-				if (err) console.log(err);
-				else callback(records);
-			})
-		});
+	sql.connect(account.config, function() {
+		var request = new sql.Request();
+		request.query(query, function(err, records){
+			if (err) console.log(err);
+			else callback(records);
+		})
+	});
 }
 
 var Parameter = function(name, type, value){
@@ -49,26 +49,25 @@ sql.connect(account.config, function() {
 });
 
 function execProcedure(procedure, params,/* type, */callback) {
-		// procedure: string containing procedure name
-		// params: array of parameter objects:
-		// {
-		// 	name: "string",
-		//	type: sql.Int, sql.VarChar(50),
-		//	value: val
-		// }
-		//sql.connect(account.config, function() {
-			var request = new sql.Request();
-			
-			for (var i = 0; i<params.length; i++) {
-				request.input(params[i].name, params[i].type, params[i].value);
-			}
-			
-			// maybe include request.type here
-			request.execute(procedure, function(err, result) {
-				if (err) console.log(err);
-				else callback(result);
-			});
-		//});
+	// procedure: string containing procedure name
+	// params: array of parameter objects:
+	// {
+	// 	name: "string",
+	//	type: sql.Int, sql.VarChar(50),
+	//	value: val
+	// }
+
+	var request = new sql.Request();
+	
+	for (var i = 0; i<params.length; i++) {
+		request.input(params[i].name, params[i].type, params[i].value);
+	}
+	
+	// maybe include request.type here
+	request.execute(procedure, function(err, result) {
+		callback(err, result.recordsets[0]);
+	});
+
 }
 
 
@@ -155,54 +154,30 @@ app.post('/Login', function (req, res) {
 
     sess = req.session;
 
-	var data = getPreData('Login') + "<username>" + username + "</username><password>" + password + "</password>" + getPostData('Login');	 
-
 	var usernameParam = new Parameter("username", sql.VarChar(30), username);
 	var passwordParam = new Parameter("password", sql.VarChar(30), password);
 	
 	var params = [usernameParam, passwordParam];
 	
-	execProcedure('spLogin', params, function(response){
-		console.log(response);
-		var teacher = response.recordsets[0];
-		if (teacher.Status == "login successful"){
-            sess.username = req.body.username;
-            sess.TeacherID = teacher.TeacherID;
-            sess.fName = teacher.fName;
-            sess.lName = teacher.lName;
-            res.send('Login successful');
-        }
-        else {
-            res.send('Login unsuccessful');
-        }
+	execProcedure('spLogin', params, function(err, response){
+		
+		if (err) {
+			res.send("Error, please try again");
+		} else {	
+			var teacher = response[0];
+			if (teacher.Status == "login successful"){
+	            sess.username = req.body.username;
+	            sess.TeacherID = teacher.TeacherID;
+	            sess.fName = teacher.fName;
+	            sess.lName = teacher.lName;
+	            res.send('Login successful');
+	        }
+	        else {
+	            res.send('Login unsuccessful');
+	        }
+		}
 	});
-/*
-	request.post({
-		url:apiurl, 
-		headers : {
-			"Content-Type": "application/soap+xml; charset=utf-8"
-		},
-		body :data 
-	}, function callBack(err, httpResponse, body) {
-	if (err) {
-		console.log('serverError');
-		console.log(err);
-		res.send("there was an error processing your request.");
-	} else {
-		var response = getResponseData(body)[0];
-        if (response.Status == "login successful"){
-            sess.username = req.body.username;
-            sess.TeacherID = response.TeacherID;
-            sess.fName = response.fName;
-            sess.lName = response.lName;
-            res.send('Login successful');
-        }
-        else {
-            res.send('Login unsuccessful');
-        }
-	}
-	});
-	* */
+
 });
 
 
@@ -272,31 +247,42 @@ app.post('/AddAssignment', function(req, res) {
     sess = req.session;
 
     if (sess.username) {
+		
+		
         var Name = req.body.AssignmentName;
         var AssignDate = req.body.AssignDate;
         var ClassID = req.body.ClassID;
-        var data = getPreData('AddAssignment');
-        data += '<AssignmentName>' + Name + '</AssignmentName>';
-        data += '<ClassID>' + ClassID + '</ClassID>';
-        data += '<AssignDate>' + AssignDate + '</AssignDate>';
-        data += getPostData('AddAssignment');
-        request.post({
-            url : apiurl,
-            headers : {
-                "Content-Type": "application/soap+xml; charset=utf-8"
-            },
-            body : data
-        }, function callback(err, httpResponse, body) {
-        if (err) {
-            console.log(err);
-            res.send("there was an error processing the request.");
-        } else {
-            var response = getResponseData(body);
-            res.send(response);
-            /////DO SOMETHING WITH DATA
-        }
-        });
-           
+        
+        var nameParam = new Parameter(
+			"AssignmentName", 
+			sql.VarChar(30), 
+			Name
+		);
+		var assignDateParam = new Parameter(
+			"AssignDate",
+			sql.DateTime, // TODO test dates
+			AssignDate
+		);
+		var classIDParam = new Parameter(
+			"ClassID",
+			sql.Int,
+			ClassID
+		);
+		var params = [
+			nameParam,
+			assignDateParam, 
+			classIDParam
+		];
+        
+        execProcedure('spAddAssignment', params, function(err, response) {
+			if (err) res.send("Error");
+			else {
+				console.log(response[0]);
+				res.send(response[0]);
+			}
+			
+		});
+
 
     }
 });
@@ -308,6 +294,23 @@ app.post('/DeleteAssignment', function(req, res) {
 
     if (sess.username) {
         var AssignmentID = req.body.AssignmentID;
+        
+        var AssignmentIDParam = new Parameter(
+			"AssignmentID",
+			sql.Int,
+			AssignmentID
+		);
+		
+		var params = [AssignmentIDParam];
+		
+		execProcedure('spDeleteAssignment', params, function(err, response) {
+			if (err) res.send("Error");
+			else {
+				res.send(response);
+			}
+		});
+        
+        /*
         var data = getPreData('DeleteAssignment');
         data += '<AssignmentID>' + AssignmentID + '</AssignmentID>';
         data += getPostData('DeleteAssignment');
@@ -327,6 +330,7 @@ app.post('/DeleteAssignment', function(req, res) {
             /////DO SOMETHING WITH DATA
         }
         });
+        */
            
 
     }
@@ -340,6 +344,32 @@ app.post('/LoadAttendance', function(req, res) {
 	if (!sess.username) {
 		res.send('You need to be logged in to do that.');
 	}
+	
+	var DayParam = new Parameter(
+		'Day',
+		sql.DateTime,
+		Day
+	);
+	var ClassIDParam = new Parameter(
+		'ClassID',
+		sql.Int,
+		ClassID
+	);
+	
+	var params = [
+		DayParam, 
+		ClassIDParam
+	];
+	
+	execProcedure(
+		'spGetAttendanceByClassAndDay', 
+		params, 
+		function(err, response) {
+			if (err) res.send("There was an error processing the request.");
+			else res.send(response);
+	});
+	
+	/*
 	var data = getPreData('GetAttendanceByClassAndDay');
 	data += '<ClassID>' + ClassID + '</ClassID>';
 	data += '<Day>' + Day + '</Day>';
@@ -360,6 +390,7 @@ app.post('/LoadAttendance', function(req, res) {
         /////DO SOMETHING WITH DATA
 	}
 	});
+	*/
 });
 
 
@@ -373,8 +404,65 @@ app.post('/SubmitAttendance', function(req, res) {
 		res.send('You need to be logged in to do that.');
 	}
 
+
+	var ClassIDParam = new Parameter(
+		"ClassID",
+		sql.Int,
+		ClassID
+	);
+	// YOU LEFT OFF HERE
+	
+	var recordsRemaining = records.length;
+	var numErrors = 0;
+	var numSuccesses = 0;
+	
     for (var r in records) {
         var record = records[r];
+        
+        var StudentIDParam = new Parameter(
+			"StudentID",
+			sql.Int,
+			record.StudentID
+		);
+		var DayParam = new Parameter(
+			"Day",
+			sql.DateTime,
+			record.Day
+		);
+		var AttendanceIDParam = new Parameter(
+			"AttendanceID",
+			sql.Int,
+			-1
+		);
+		var IsPresentParam = new Parameter(
+			"isPresent",
+			sql.Bit,
+			record.isPresent
+		);
+			
+		var params = [
+			ClassIDParam,
+			StudentIDParam, 
+			DayParam,
+			AttendanceIDParam, 
+			IsPresentParam
+		];
+        
+        execProcedure('spAddUpdateAttendance', params, function(err, response) {
+			// check to see if all records have been updated
+			recordsRemaining--;
+			if (err) numErrors++;
+			else numSuccesses++;
+			
+			if (recordsRemaining == 0) {
+				res.send(numSuccesses + 
+					" records updated successfully, with " + 
+					numErrors + " errors."
+				);
+			}
+		});
+	}
+        /*
         var data = getPreData('AddUpdateAttendance');
         data += '<AttendanceID>' + (0-1) + '</AttendanceID>';
         data += '<StudentID>' + record.StudentID + '</StudentID>';
@@ -400,7 +488,7 @@ app.post('/SubmitAttendance', function(req, res) {
         });
     }
     res.send("Success!");
-
+	*/
 });
 
 
@@ -411,7 +499,14 @@ app.get('/GetStudents', function(req, res) {
 	sess = req.session;
 	if (!sess.username) {
 		res.send('You need to be logged in to do that.');
+		return;
 	}
+	
+	execProcedure('spGetStudents', [], function(err, response) {
+		if (err) res.send("There was an error processing the request.");
+		else res.send(response);
+	});
+	/*
 	var data = getPreData('GetStudents');
 	/////////TODO add data
 	data += getPostData('GetStudents');
@@ -430,6 +525,7 @@ app.get('/GetStudents', function(req, res) {
 		res.send(response);
 	}
 	});
+	*/
 });
 
 //////// THE REST AUTOMATICALLY GENERATED
@@ -440,6 +536,20 @@ app.post('/GetClassesByTeacher', function(req, res) {
 	if (!sess.username) {
 		res.send('You need to be logged in to do that.');
 	}
+	
+	var TeacherIDParam = new Parameter(
+		"TeacherID",
+		sql.Int,
+		TeacherID
+	);
+	
+	var params = [TeacherIDParam];
+	
+	execProcedure('spGetClassesByTeacher', params, function(err, response) {
+		if (err) res.send("Error");
+		else res.send(response);
+	});
+	/*
 	var data = getPreData('GetClassesByTeacher');
 	data += '<TeacherID>' + TeacherID + '</TeacherID>';
 	data += getPostData('GetClassesByTeacher');
@@ -459,6 +569,7 @@ app.post('/GetClassesByTeacher', function(req, res) {
         /////DO SOMETHING WITH DATA
 	}
 	});
+	* */
 });
 
 app.get('/GetClasses', function(req, res) {
@@ -470,6 +581,19 @@ app.get('/GetClasses', function(req, res) {
 
 	var TeacherID = sess.TeacherID;
 
+	var TeacherIDParam = new Parameter(
+		"TeacherID",
+		sql.Int,
+		TeacherID
+	);
+	
+	var params = [TeacherIDParam];
+	
+	execProcedure('spGetClassesByTeacher', params, function(err, response) {
+		if (err) res.send("Error");
+		else res.send(response);
+	});
+/*
     var data = getPreData('GetClassesByTeacher');
     data += '<TeacherID>' + TeacherID + '</TeacherID>';
     data += getPostData('GetClassesByTeacher');
@@ -489,7 +613,7 @@ app.get('/GetClasses', function(req, res) {
         /////DO SOMETHING WITH DATA
     }
     });
-
+*/
 });
 
 app.get('/Roster', function(req, res) {
@@ -510,6 +634,53 @@ app.post('/GetStudentsByClass', function(req, res) {
     // check if class is one owned by teacher
  	var TeacherID = sess.TeacherID;
 
+	var TeacherIDParam = new Parameter(
+		"TeacherID",
+		sql.Int,
+		TeacherID
+	);
+
+	var params = [TeacherIDParam];
+	
+	execProcedure('spGetClassesByTeacher', params, function(err, response) {
+		if (err) res.send("There was a problem with your request.");
+		else {
+			
+			var classes = response;
+			var ClassID = req.body.ClassID;
+			
+			var hasAccess = false;
+			for (var c = 0; c<classes.size; c++) {
+				if (ClassID = classes[c].ClassID) {
+					hasAccess = true;
+				}
+			}
+			
+			
+			if (hasAccess) {
+				var ClassIDParam = new Parameter(
+					"ClassID",
+					sql.Int,
+					ClassID
+				);
+				params = [ClassID];
+				
+				execProcedure('spGetStudentsByClass', params, 
+					function(err_2, response_2) {
+						if (err_2) res.send("There was a problem with your request");
+						else {
+							console.log(response_2);
+							res.send(response_2);
+						}
+					}
+				);
+				
+			} else {
+				res.send("You don't have access to this class!");
+			}
+		}
+	});
+	/*
     var data = getPreData('GetClassesByTeacher');
     data += '<TeacherID>' + TeacherID + '</TeacherID>';
     data += getPostData('GetClassesByTeacher');
@@ -562,19 +733,39 @@ app.post('/GetStudentsByClass', function(req, res) {
         }
 
     }
-    });       
+    });  
+    */     
 
 });
 
 app.post('/UpdateRoster', function(req, res) {
 
+
     sess = req.session;
     // TODO make app check for login / access to class
 
     var TeacherID = sess.TeacherID;
-    var classID = req.body.ClassID;
+    var ClassID = req.body.ClassID;
     var edits = req.body.students;
 
+	var numErrors = 0;
+	var numSuccesses = 0;
+	var numStudentsRemaining = edits.length;
+	
+	var whenFinished = function() {
+		res.send(numSuccesses + " records updated, with " + numErrors + " failures");
+	}
+
+	var TeacherIDParam = new Parameter(
+		'TeacherID',
+		sql.Int,
+		TeacherID
+	);
+	var ClassIDParam = new Parameter(
+		'ClassID',
+		sql.Int, 
+		ClassID
+	);
    
     for (var e in edits) {
         var student = edits[e];
@@ -588,65 +779,74 @@ app.post('/UpdateRoster', function(req, res) {
                 student.isTalkative = false;
             }
 
-
-            var data = getPreData('SetTeacherStudentNotes');
-            data += '<TeacherID>' + TeacherID + '</TeacherID>';
-            data += '<StudentID>' + student.StudentID + '</StudentID>';
-            data += '<isNearsighted>' + student.isNearsighted + '</isNearsighted>';
-            data += '<isTalkative>' + student.isTalkative + '</isTalkative>';
-            data += '<notes>' + student.notes + '</notes>';
-            data += getPostData('SetTeacherStudentNotes');
-            request.post({
-                url : apiurl,
-                headers : {
-                    "Content-Type": "application/soap+xml; charset=utf-8"
-                },
-                body : data
-            }, function callback(err, httpResponse, body) {
-            if (err) {
-                console.log(err);
-                //res.send("there was an error processing the request.");
-            } else {
-            
-                var response = getResponseData(body);
-                //res.send(response);
-                /////DO SOMETHING WITH DATA
-            }
-            });
-
-
-
+			var StudentIDParam = new Parameter(
+				'StudentID',
+				sql.Int,
+				student.StudentID
+			);
+			var isNearsightedParam = new Parameter(
+				'isNearsighted',
+				sql.Bit, 
+				student.isNearsighted
+			);
+			
+			var isTalkativeParam = new Parameter(
+				'isTalkative',
+				sql.Bit, 
+				student.isTalkative
+			);
+			var notesParam = new Parameter(
+				'notes',
+				sql.Text,
+				student.notes
+			);
+			
+			var params = [
+				TeacherIDParam, 
+				StudentIDParam,
+				isNearsightedParam,
+				isTalkativeParam,
+				notesParam
+			];
+			
+			execProcedure('spSetStudentTeacherNotes', params, function(err, response) {
+				
+				if (err) numErrors++;
+				else numSuccesses++;
+				
+				if (--numStudentsRemaining == 0){
+					whenFinished();
+				}
+				
+			});
+				
         } else {
             var StudentID = student.StudentID;
         
-
-
-            var data = getPreData('RemoveStudentFromClass');
-            data += '<StudentID>' + StudentID + '</StudentID>';
-            data += '<ClassID>' + classID + '</ClassID>';
-            data += getPostData('RemoveStudentFromClass');
-            request.post({
-                url : apiurl,
-                headers : {
-                    "Content-Type": "application/soap+xml; charset=utf-8"
-                },
-                body : data
-            }, function callback(err, httpResponse, body) {
-            if (err) {
-                console.log(err);
-                //res.send("there was an error processing the request.");
-            } else {
-                
-                var response = getResponseData(body);
-                //res.send(response);
-                /////DO SOMETHING WITH DATA
-            }
-            });
+			
+			var StudentIDParam = new Parameter(
+				'StudentID',
+				sql.Int,
+				student.StudentID
+			);
+			
+			var params = [
+				StudentIDParam, 
+				ClassIDParam
+			];
+			
+			execProcedure('spRemoveStudentFromClass', params, function(err, response) {
+				if (err) numErrors++;
+				else numSuccesses++;
+				
+				if (--numStudentsRemaining == 0){
+					whenFinished();
+				}
+			});
 
 
         }
     }
-    res.send("Success!"); // TODO figure out
 
 });
 
@@ -658,30 +858,28 @@ app.post('/AddStudentToClass', function(req, res) {
     
     var StudentID = req.body.StudentID;
     var ClassID = req.body.ClassID;
-
-    var data = getPreData('AddStudentToClass');
-    data += '<ClassID>' + ClassID + '</ClassID>';
-    data += '<StudentID>' + StudentID + '</StudentID>';
-    data += getPostData('AddStudentToClass');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-
-        var response = getResponseData(body);
-        res.send(response);
-        /////DO SOMETHING WITH DATA
-    }
-    });
-
-
+    
+    var StudentIDParam = new Parameter(
+		'StudentID',
+		sql.Int,
+		StudentID
+	);
+	
+	var ClassIDParam = new Parameter(
+		'ClassID',
+		sql.Int, 
+		ClassID
+	);
+	
+	var params = [
+		StudentIDParam, 
+		ClassIDParam
+	];
+	
+	execProcedure('spAddStudentToClass', params, function(err, response) {
+		if (err) res.send("There was an error processing the request.");
+		else res.send(response);
+	});
 });
 
 app.post('/GetTeacherStudentNotes', function(req, res){
@@ -690,30 +888,29 @@ app.post('/GetTeacherStudentNotes', function(req, res){
     
     var TeacherID = sess.TeacherID;
     var StudentID = req.body.StudentID;
-    var data = getPreData('GetTeacherStudentNotes');
-    data += '<TeacherID>' + TeacherID + '</TeacherID>';
-    data += '<StudentID>' + StudentID + '</StudentID>';
-    data += getPostData('GetTeacherStudentNotes');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-
-        var response = getResponseData(body);
-        res.send(response);
-        /////DO SOMETHING WITH DATA
-    }
-    });
-
-
-
+    
+    var TeacherIDParam = new Parameter(
+		'TeacherID',
+		sql.Int,
+		TeacherID
+	);
+	var StudentIDParam = new Parameter(
+		'StudentID',
+		sql.Int,
+		StudentID
+	);
+	var params = [
+		TeacherIDParam,
+		StudentIDParam
+	];
+	execProcedure('spGetTeacherStudentNotes', params, function(err, response) {
+		if(err) {
+			res.send("there was an error processing the request.");
+		} else {
+			res.send(response);
+		}
+	});
+	
 });
 
 
@@ -721,33 +918,31 @@ app.post('/GetTeacherStudentNotes', function(req, res){
 function removeStudentFromClass(StudentID, classID){
     console.log("delete " + StudentID + " from " + classID);
 
-
-    var data = getPreData('RemoveStudentFromClass');
-    data += '<TeacherID>' + TeacherID + '</TeacherID>';
-    data += '<StudentID>' + StudentID + '</StudentID>';
-    data += getPostData('RemoveStudentFromClass');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        
-        var response = getResponseData(body);
-        res.send(response);
-        /////DO SOMETHING WITH DATA
-    }
-    });
-
-
-
+	var TeacherIDParam = new Parameter(
+		'TeacherID',
+		sql.Int,
+		TeacherID
+	);
+	var StudentIDParam = new Parameter(
+		'StudentID',
+		sql.Int,
+		StudentID
+	);
+	var params = [
+		TeacherIDParam,
+		StudentIDParam
+	];
+	execProcedure('spRemoveStudentFromClass', params, function(err, response) {
+		if(err) {
+	        res.send("there was an error processing the request.");
+		} else {
+	        res.send(response);
+		}
+	});
 }
 
+
+//TODO fix
 app.post('/GetStudentsInHat', function(req, res) {
     sess = req.session;
 
@@ -834,30 +1029,27 @@ app.post('/DrawStudent', function(req, res) {
     var StudentID = req.body.StudentID;
     var ClassID = req.body.ClassID;
     
-    var data = getPreData('DrawStudentFromHat');
-    data += '<StudentID>' + StudentID + '</StudentID>';
-    data += '<ClassID>' + ClassID + '</ClassID>';
-    data += getPostData('DrawStudentFromHat');
-    
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
-
-
-
+    var StudentIDParam = new Parameter(
+		'StudentID',
+		sql.Int,
+		StudentID
+	);
+	var ClassIDParam = new Parameter(
+		'ClassID',
+		sql.Int,
+		ClassID
+	);
+	var params = [
+		StudentIDParam,
+		ClassIDParam
+	];
+	execProcedure('spDrawStudentFromHat', params, function(err, response) {
+		if(err) {
+	        res.send("there was an error processing the request.");
+		} else {
+	        res.send(response);
+		}
+	});
 });
 
 
@@ -879,27 +1071,27 @@ app.post('/ResetHat', function(req, res) {
 	sess = req.session;
 	if (!sess.username) {
 		res.send('You need to be logged in to do that.');
+		return;
 	}
-	var data = getPreData('ResetHat');
-	data += '<ClassID>' + ClassID + '</ClassID>';
-	data += getPostData('ResetHat');
-	request.post({
-		url : apiurl,
-		headers : {
-			"Content-Type": "application/soap+xml; charset=utf-8"
-		},
-		body : data
-	}, function callback(err, httpResponse, body) {
-	if (err) {
-		console.log(err);
-		res.send("there was an error processing the request.");
-	} else {
-		var response = getResponseData(body);
-		res.send(response);
-	}
+	
+	var ClassIDParam = new Parameter(
+		'ClassID',
+		sql.Int,
+		ClassID
+	);
+	var params = [
+		ClassIDParam
+	];
+	execProcedure('spResetHat', params, function(err, response) {
+		if(err) {
+	
+		} else {
+	
+		}
 	});
 });
 
+// TODO not working
 app.post('/ChangeTeacher', function(req, res) {
     sess = req.session;
  	var TeacherID = sess.TeacherID;
@@ -951,29 +1143,33 @@ app.post('/DeleteClass', function(req, res) {
     if (!sess.username){
         res.send("You need to be logged in to do that.");
     } else {
-
-    	var data = getPreData('AddUpdateDeleteClass');
-        data += '<ClassID>' + req.body.ClassID + '</ClassID>';
-        data += '<Name>' + 'asdf' + '</Name>';
-        data += '<delete>' + 'true' + '</delete>';
-        data += getPostData('AddUpdateDeleteClass');
-        request.post({
-            url : apiurl,
-            headers : {
-                "Content-Type": "application/soap+xml; charset=utf-8"
-            },
-            body : data
-        }, function callback(err, httpResponse, body) {
-        if (err) {
-            console.log(err);
-            res.send("there was an error processing the request.");
-        } else {
-            var response = getResponseData(body);
-            res.send(response);
-        }
-        });
-        
-
+		var ClassIDParam = new Parameter(
+			'ClassID',
+			sql.Int,
+			req.body.ClassID
+		);
+		var NameParam = new Parameter(
+			'Name',
+			sql.VarChar(30),
+			'asdf'
+		);
+		var deleteParam = new Parameter(
+			'delete',
+			sql.Bit,
+			true
+		);
+		var params = [
+			ClassIDParam,
+			NameParam,
+			deleteParam
+		];
+		execProcedure('spAddUpdateDeleteClass', params, function(err, response) {
+			if(err) {
+				res.send("there was an error processing the request.");
+			} else {
+				res.send(response);
+			}
+		});
     }
 });
 
@@ -987,26 +1183,30 @@ app.post("/AddClass", function(req, res){
         var Name = req.body.className;
         var TeacherID = sess.TeacherID;
     	var data = getPreData('AddUpdateDeleteClass');
-        data += '<Name>' + Name + '</Name>';
-        data += '<TeacherID>' + TeacherID + '</TeacherID>';
-        data += getPostData('AddUpdateDeleteClass');
-        request.post({
-            url : apiurl,
-            headers : {
-                "Content-Type": "application/soap+xml; charset=utf-8"
-            },
-            body : data
-        }, function callback(err, httpResponse, body) {
-        if (err) {
-            console.log(err);
-            res.send("there was an error processing the request.");
-        } else {
-            var response = getResponseData(body);
-            res.send(response);
-        }
-        });
-        
-
+    	
+    	var nameParam = new Parameter(
+			"Name",
+			sql.VarChar(30),
+			Name
+		);
+		var TeacherIDParam = new Parameter(
+			"TeacherID",
+			sql.Int,
+			TeacherID
+		);
+		var params = [
+			nameParam,
+			TeacherIDParam
+		];
+    	
+    	execProcedure("spAddUpdateDeleteClass", params, function(err, response) {
+			if (err) {
+	            console.log(err);
+	            res.send("there was an error processing the request.");
+	        } else {
+	            res.send(response);
+	        }
+		});
     }
 });
 
@@ -1021,62 +1221,58 @@ app.post('/AddTeacher', function(req, res) {
 		fName, 
 		lName
     ];
-    
-	/*
-    var data = getPreData('AddTeacher');
-    data += '<fName>' + fName + '</fName>';
-    data += '<lName>' + lName + '</lName>';
-    data += '<username>' + username + '</username>';
-    data += '<password>' + password + '</password>';
-    data += getPostData('AddTeacher');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
-   */
-	execProcedure('spAddTeacher', params, function(response) {
-	   console.log(response);
+
+	execProcedure('spAddTeacher', params, function(err, response) {
+		if (err) res.send("Error");
+		else {
+			res.send(response);
+			console.log(response);
+		}
     });
 });
 
 app.post('/DeleteAccount', function (req, res) {
     
     sess = req.session;
-
-    var data = getPreData('UpdateDeleteTeacher');
-    data += '<TeacherID>' + sess.TeacherID + '</TeacherID>';
-    data += '<fName>' + 'fname'+ '</fName>';
-    data += '<lName>' + 'lName' + '</lName>';
-    data += '<password>' + 'password' + '</password>';
-    data += '<delete>' + 'true' + '</delete>';
-    data += getPostData('UpdateDeleteTeacher');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
-   
+	var TeacherIDParam = new Parameter(
+		'TeacherID',
+		sql.Int,
+		sess.TeacherID
+	);
+	var fNameParam = new Parameter(
+		'fName',
+		sql.VarChar(30),
+		'fName'
+	);
+	var lNameParam = new Parameter(
+		'lName',
+		sql.VarChar(30),
+		'lName'
+	);
+	var passwordParam = new Parameter(
+		'password',
+		sql.VarChar(30),
+		'pasword'
+	);
+	var deleteParam = new Parameter(
+		'delete',
+		sql.Bit,
+		true
+	);
+	var params = [
+		TeacherIDParam,
+		fNameParam,
+		lNameParam,
+		passwordParam,
+		deleteParam
+	];
+	execProcedure('spUpdateDeleteTeacher', params, function(err, response) {
+		if(err) {
+			res.send("there was an error processing the request.");
+		} else {
+			res.send(response);
+		}
+	});
 });
 
 
@@ -1087,56 +1283,66 @@ app.post('/UpdateAccount', function (req, res) {
     var lName = req.body.lName;
     var password = req.body.password;
 
-
-    var data = getPreData('UpdateDeleteTeacher');
-    data += '<TeacherID>' + sess.TeacherID + '</TeacherID>';
-    data += '<fName>' + fName + '</fName>';
-    data += '<lName>' + lName + '</lName>';
-    data += '<password>' + password + '</password>';
-    data += '<delete>' + 'false' + '</delete>';
-    data += getPostData('UpdateDeleteTeacher');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
-   
+	var TeacherIDParam = new Parameter(
+		'TeacherID',
+		sql.Int,
+		sess.TeacherID
+	);
+	var fNameParam = new Parameter(
+		'fName',
+		sql.VarChar(30),
+		fName
+	);
+	var lNameParam = new Parameter(
+		'lName',
+		sql.VarChar(30),
+		lName
+	);
+	var passwordParam = new Parameter(
+		'password',
+		sql.VarChar(30),
+		password
+	);
+	var deleteParam = new Parameter(
+		'delete',
+		sql.Bit,
+		false
+	);
+	var params = [
+		TeacherIDParam,
+		fNameParam,
+		lNameParam,
+		passwordParam,
+		deleteParam
+	];
+	execProcedure('spUpdateDeleteTeacher', params, function(err, response) {
+		if(err) {
+			res.send("there was an error processing the request.");
+		} else {
+			res.send(response);
+		}
+	});
 });
 
 app.post('/GetAssignmentsByClass', function (req, res) {
     
     sess = req.session;
     var ClassID = req.body.ClassID;
-
-    var data = getPreData('GetAssignmentsByClass');
-    data += '<ClassID>' + ClassID + '</ClassID>';
-    data += getPostData('GetAssignmentsByClass');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
-   
+	var ClassIDParam = new Parameter(
+		'ClassID',
+		sql.Int,
+		ClassID
+	);
+	var params = [
+		ClassIDParam
+	];
+	execProcedure('spGetAssignmentsByClass', params, function(err, response) {
+		if(err) {
+			res.send("there was an error processing the request.");
+		} else {
+			res.send(response);
+		}
+	});
 });
 
 
@@ -1149,25 +1355,27 @@ app.post('/GetStudentAssignmentsByAssignDate', function (req, res) {
     var StudentID = req.body.StudentID;
     var AssignDate = req.body.AssignDate;
 
-    var data = getPreData('GetStudentAssignmentsByAssignDate');
-    data += '<StudentID>' + StudentID + '</StudentID>';
-    data += '<AssignDate>' + AssignDate + '</AssignDate>';
-    data += getPostData('GetStudentAssignmentsByAssignDate');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
+	var StudentIDParam = new Parameter(
+		'StudentID',
+		sql.Int,
+		StudentID
+	);
+	var AssignDateParam = new Parameter(
+		'AssignDate',
+		sql.DateTime,
+		AssignDate
+	);
+	var params = [
+		StudentIDParam,
+		AssignDateParam
+	];
+	execProcedure('spGetStudentAssignmentsByAssignDate', params, function(err, response) {
+		if(err) {
+			res.send('there was an error processing the request.');
+		} else {
+			res.send(response);
+		}
+	});
    
 });
 
@@ -1175,29 +1383,24 @@ app.post('/GetStudentAssignmentsByAssignDate', function (req, res) {
 app.post('/GetStudentsMarkedAbsent', function (req, res) {
     
     sess = req.session;
-    var fName = req.body.fName;
-    var lName = req.body.lName;
-    var password = req.body.password;
+  
+	var DayParam = new Parameter(
+		'Day',
+		sql.DateTime,
+		req.body.Day
+	);
+	var params = [
+		DayParam
+	];
+	execProcedure('spGetStudentsMarkedAbsent', params, function(err, response) {
+		if(err) {
+			res.send('there was an error processing the request.');
+		} else {
+			res.send(response);
+		}
+	});
 
 
-    var data = getPreData('GetStudentsMarkedAbsent');
-    data += '<Day>' + Day + '</Day>';
-    data += getPostData('GetStudentsMarkedAbsent');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-    }
-    });
    
 });
 
