@@ -162,7 +162,7 @@ app.post('/Login', function (req, res) {
 	
 	var params = [usernameParam, passwordParam];
 	
-	execProcedure('Login', params, function(response){
+	execProcedure('spLogin', params, function(response){
 		console.log(response);
 	});
 /*
