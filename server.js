@@ -59,7 +59,7 @@ function execProcedure(procedure, params,/* type, */callback) {
 		//sql.connect(account.config, function() {
 			var request = new sql.Request();
 			
-			for (int i = 0; i<params.length; i++) {
+			for (var i = 0; i<params.length; i++) {
 				request.input(params[i].name, params[i].type, params[i].value);
 			}
 			
