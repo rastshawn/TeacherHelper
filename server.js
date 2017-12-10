@@ -164,6 +164,17 @@ app.post('/Login', function (req, res) {
 	
 	execProcedure('spLogin', params, function(response){
 		console.log(response);
+		var teacher = response.recordsets[0];
+		if (teacher.Status == "login successful"){
+            sess.username = req.body.username;
+            sess.TeacherID = teacher.TeacherID;
+            sess.fName = teacher.fName;
+            sess.lName = teacher.lName;
+            res.send('Login successful');
+        }
+        else {
+            res.send('Login unsuccessful');
+        }
 	});
 /*
 	request.post({
