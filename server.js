@@ -1,15 +1,6 @@
 "use strict";
-/////////////////////////////////////////////////// Server
-/*
-var connect = require('connect');
-var serveStatic = require('serve-static');
-connect().use(serveStatic(__dirname + "/http")).listen(3000, function(){
-	console.log('Server running on 3000');
-});
-*/
-var apiurl = "http://ec2-54-69-225-248.us-west-2.compute.amazonaws.com/TeacherHelperNET/WebService.asmx";
 let PORT = 3511;
-/////////////////////////////////////////////////// Backend
+
 
 var request = require('request');
 var express = require('express');
@@ -139,6 +130,11 @@ app.listen(PORT, function() {
 var sess; // global variable for storing session. 
 
 
+
+
+//////////////////////////////////////////////////////////////// ROUTING PAGES
+
+
 // Get request to '/', renders login or homepage
 app.get('/', function (req, res) {
 	sess = req.session;
@@ -152,47 +148,6 @@ app.get('/', function (req, res) {
 });
 
 
-
-app.post('/Login', function (req, res) {
-    
-	var username = req.body.username;
-	var password = req.body.password;
-
-    sess = req.session;
-
-	var usernameParam = new Parameter("username", sql.VarChar(30), username);
-	var passwordParam = new Parameter("password", sql.VarChar(30), password);
-	
-	var params = [usernameParam, passwordParam];
-	
-	execProcedure('spLogin', params, function(err, response){
-		
-		if (err) {
-			res.send("Error, please try again");
-		} else {	
-			var teacher = response[0];
-			if (teacher.Status == "login successful"){
-	            sess.username = req.body.username;
-	            sess.TeacherID = teacher.TeacherID;
-	            sess.fName = teacher.fName;
-	            sess.lName = teacher.lName;
-	            res.send('Login successful');
-	        }
-	        else {
-	            res.send('Login unsuccessful');
-	        }
-		}
-	});
-
-});
-
-
-app.get('/logout', function(req, res) {
-    req.session.destroy(function(err) {
-        if (err) console.log(err);
-        else res.redirect('/');
-    });
-});
 
 app.get('/GetUser', function(req, res) {
     var user = {
@@ -236,8 +191,6 @@ app.get('/Overview', function (req, res) {
 	}
 });
 
-
-
 app.get('/Assignments', function (req, res) {
 	sess = req.session;
 
@@ -248,6 +201,64 @@ app.get('/Assignments', function (req, res) {
 		res.render('login.html');
 	}
 });
+
+app.get('/Roster', function(req, res) {
+
+    sess = req.session;
+
+    if (sess.username)
+        res.render('roster.html');
+    else
+        res.render('login.html');
+});
+
+
+app.get('/logout', function(req, res) {
+    req.session.destroy(function(err) {
+        if (err) console.log(err);
+        else res.redirect('/');
+    });
+});
+
+
+
+
+///////////////////////////////////////////////////////// API 
+
+app.post('/Login', function (req, res) {
+    
+	var username = req.body.username;
+	var password = req.body.password;
+
+    sess = req.session;
+
+	var usernameParam = new Parameter("username", sql.VarChar(30), username);
+	var passwordParam = new Parameter("password", sql.VarChar(30), password);
+	
+	var params = [usernameParam, passwordParam];
+	
+	execProcedure('spLogin', params, function(err, response){
+		
+		if (err) {
+			res.send("Error, please try again");
+		} else {	
+			var teacher = response[0];
+			if (teacher.Status == "login successful"){
+	            sess.username = req.body.username;
+	            sess.TeacherID = teacher.TeacherID;
+	            sess.fName = teacher.fName;
+	            sess.lName = teacher.lName;
+	            res.send('Login successful');
+	        }
+	        else {
+	            res.send('Login unsuccessful');
+	        }
+		}
+	});
+
+});
+
+
 
 app.post('/AddAssignment', function(req, res) {
     sess = req.session;
@@ -315,29 +326,7 @@ app.post('/DeleteAssignment', function(req, res) {
 				res.send(response);
 			}
 		});
-        
-        /*
-        var data = getPreData('DeleteAssignment');
-        data += '<AssignmentID>' + AssignmentID + '</AssignmentID>';
-        data += getPostData('DeleteAssignment');
-        request.post({
-            url : apiurl,
-            headers : {
-                "Content-Type": "application/soap+xml; charset=utf-8"
-            },
-            body : data
-        }, function callback(err, httpResponse, body) {
-        if (err) {
-            console.log(err);
-            res.send("there was an error processing the request.");
-        } else {
-            var response = getResponseData(body);
-            res.send(response);
-            /////DO SOMETHING WITH DATA
-        }
-        });
-        */
-           
+          
 
     }
 });
@@ -375,28 +364,7 @@ app.post('/LoadAttendance', function(req, res) {
 			else res.send(response);
 	});
 	
-	/*
-	var data = getPreData('GetAttendanceByClassAndDay');
-	data += '<ClassID>' + ClassID + '</ClassID>';
-	data += '<Day>' + Day + '</Day>';
-	data += getPostData('GetAttendanceByClassAndDay');
-	request.post({
-		url : apiurl,
-		headers : {
-			"Content-Type": "application/soap+xml; charset=utf-8"
-		},
-		body : data
-	}, function callback(err, httpResponse, body) {
-	if (err) {
-		console.log(err);
-		res.send("there was an error processing the request.");
-	} else {
-        var response = getResponseData(body);
-        res.send(response);
-        /////DO SOMETHING WITH DATA
-	}
-	});
-	*/
+
 });
 
 
@@ -468,40 +436,14 @@ app.post('/SubmitAttendance', function(req, res) {
 			}
 		});
 	}
-        /*
-        var data = getPreData('AddUpdateAttendance');
-        data += '<AttendanceID>' + (0-1) + '</AttendanceID>';
-        data += '<StudentID>' + record.StudentID + '</StudentID>';
-        data += '<ClassID>' + ClassID + '</ClassID>';
-        data += '<Day>' + record.Day + '</Day>';
-        data += '<isPresent>' + record.isPresent + '</isPresent>';
-        data += getPostData('AddUpdateAttendance');
-        request.post({
-            url : apiurl,
-            headers : {
-                "Content-Type": "application/soap+xml; charset=utf-8"
-            },
-            body : data
-        }, function callback(err, httpResponse, body) {
-        if (err) {
-            console.log(err);
-            res.send("there was an error processing the request.");
-        } else {
-            //var response = getResponseData(body);
-            //res.send(response);
-            /////DO SOMETHING WITH DATA
-        }
-        });
-    }
-    res.send("Success!");
-	*/
+
 });
 
 
 
 
 app.get('/GetStudents', function(req, res) {
-	//data goes here
+
 	sess = req.session;
 	if (!sess.username) {
 		res.send('You need to be logged in to do that.');
@@ -512,29 +454,10 @@ app.get('/GetStudents', function(req, res) {
 		if (err) res.send("There was an error processing the request.");
 		else res.send(response);
 	});
-	/*
-	var data = getPreData('GetStudents');
-	/////////TODO add data
-	data += getPostData('GetStudents');
-	request.post({
-		url : apiurl,
-		headers : {
-			"Content-Type": "application/soap+xml; charset=utf-8"
-		},
-		body : data
-	}, function callback(err, httpResponse, body) {
-	if (err) {
-		console.log(err);
-		res.send("there was an error processing the request.");
-	} else {
-		var response = getResponseData(body);
-		res.send(response);
-	}
-	});
-	*/
+
 });
 
-//////// THE REST AUTOMATICALLY GENERATED
+
 
 app.post('/GetClassesByTeacher', function(req, res) {
 	var TeacherID = req.body.TeacherID;
@@ -555,27 +478,7 @@ app.post('/GetClassesByTeacher', function(req, res) {
 		if (err) res.send("Error");
 		else res.send(response);
 	});
-	/*
-	var data = getPreData('GetClassesByTeacher');
-	data += '<TeacherID>' + TeacherID + '</TeacherID>';
-	data += getPostData('GetClassesByTeacher');
-	request.post({
-		url : apiurl,
-		headers : {
-			"Content-Type": "application/soap+xml; charset=utf-8"
-		},
-		body : data
-	}, function callback(err, httpResponse, body) {
-	if (err) {
-		console.log(err);
-		res.send("there was an error processing the request.");
-	} else {
-		var response = getResponseData(body);
-        res.send(response);
-        /////DO SOMETHING WITH DATA
-	}
-	});
-	* */
+
 });
 
 app.get('/GetClasses', function(req, res) {
@@ -599,42 +502,13 @@ app.get('/GetClasses', function(req, res) {
 		if (err) res.send("Error");
 		else res.send(response);
 	});
-/*
-    var data = getPreData('GetClassesByTeacher');
-    data += '<TeacherID>' + TeacherID + '</TeacherID>';
-    data += getPostData('GetClassesByTeacher');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var response = getResponseData(body);
-        res.send(response);
-        /////DO SOMETHING WITH DATA
-    }
-    });
-*/
+
 });
 
-app.get('/Roster', function(req, res) {
-
-    sess = req.session;
-
-    if (sess.username)
-        res.render('roster.html');
-    else
-        res.render('login.html');
-});
 
 app.post('/GetStudentsByClass', function(req, res) {
     sess = req.session;
-    // check if logged in
+    // TODO check if logged in
 
 
     // check if class is one owned by teacher
@@ -689,61 +563,7 @@ app.post('/GetStudentsByClass', function(req, res) {
 			}
 		}
 	});
-	/*
-    var data = getPreData('GetClassesByTeacher');
-    data += '<TeacherID>' + TeacherID + '</TeacherID>';
-    data += getPostData('GetClassesByTeacher');
-    request.post({
-        url : apiurl,
-        headers : {
-            "Content-Type": "application/soap+xml; charset=utf-8"
-        },
-        body : data
-    }, function callback(err, httpResponse, body) {
-    if (err) {
-        console.log(err);
-        res.send("there was an error processing the request.");
-    } else {
-        var classes = getResponseData(body);
-        var ClassID = req.body.ClassID;
-        
-        var hasAccess = false;
-        for (var c in classes) {
-            if (ClassID == classes[c].ClassID)
-                hasAccess = true;
-        }
 
-        /////DO SOMETHING WITH DATA
-        if (hasAccess){
-            
-            var data = getPreData('GetStudentsByClass');
-            data += '<ClassID>' + ClassID + '</ClassID>';
-            data += getPostData('GetStudentsByClass');
-            request.post({
-                url : apiurl,
-                headers : {
-                    "Content-Type": "application/soap+xml; charset=utf-8"
-                },
-                body : data
-            }, function callback(err, httpResponse, body) {
-            if (err) {
-                console.log(err);
-                res.send("there was an error processing the request.");
-            } else {
-                
-                var response = getResponseData(body);
-                res.send(response);
-                /////DO SOMETHING WITH DATA
-            }
-            });
-
-        } else {
-            res.send("You don't have access to this class.");
-        }
-
-    }
-    });  
-    */     
 
 });
 
