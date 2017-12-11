@@ -58,7 +58,7 @@ function getNotes(students){
     var numLoaded = 0;
     var returnArray = [];
 
-
+	console.log(students);
     for (var s in students) {
         var data = {
             "StudentID" : students[s].StudentID
@@ -69,6 +69,7 @@ function getNotes(students){
             method:"POST",
             data : data,
             success: function(response){
+				console.log(response);
                 response = response[0];
                 numLoaded++;
                 console.log(response);

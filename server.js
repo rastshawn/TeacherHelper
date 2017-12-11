@@ -65,7 +65,13 @@ function execProcedure(procedure, params,/* type, */callback) {
 	
 	// maybe include request.type here
 	request.execute(procedure, function(err, result) {
-		callback(err, result.recordsets[0]);
+		if (result){
+			callback(err, result.recordsets[0]);
+		}
+		else if (err) {
+			console.log(err);
+		}
+		
 	});
 
 }
@@ -649,9 +655,12 @@ app.post('/GetStudentsByClass', function(req, res) {
 			var classes = response;
 			var ClassID = req.body.ClassID;
 			
+			
+			
 			var hasAccess = false;
-			for (var c = 0; c<classes.size; c++) {
-				if (ClassID = classes[c].ClassID) {
+			for (var c = 0; c<classes.length; c++) {
+				
+				if (ClassID == classes[c].ClassID) {
 					hasAccess = true;
 				}
 			}
@@ -663,7 +672,7 @@ app.post('/GetStudentsByClass', function(req, res) {
 					sql.Int,
 					ClassID
 				);
-				params = [ClassID];
+				params = [ClassIDParam];
 				
 				execProcedure('spGetStudentsByClass', params, 
 					function(err_2, response_2) {
@@ -753,8 +762,9 @@ app.post('/UpdateRoster', function(req, res) {
 	var numStudentsRemaining = edits.length;
 	
 	var whenFinished = function() {
+		console.log("finished");
 		res.send(numSuccesses + " records updated, with " + numErrors + " failures");
-	}
+	};
 
 	var TeacherIDParam = new Parameter(
 		'TeacherID',
@@ -809,7 +819,7 @@ app.post('/UpdateRoster', function(req, res) {
 				notesParam
 			];
 			
-			execProcedure('spSetStudentTeacherNotes', params, function(err, response) {
+			execProcedure('spSetTeacherStudentNotes', params, function(err, response) {
 				
 				if (err) numErrors++;
 				else numSuccesses++;
@@ -905,8 +915,10 @@ app.post('/GetTeacherStudentNotes', function(req, res){
 	];
 	execProcedure('spGetTeacherStudentNotes', params, function(err, response) {
 		if(err) {
+			console.log(err);
 			res.send("there was an error processing the request.");
 		} else {
+			
 			res.send(response);
 		}
 	});
@@ -948,63 +960,60 @@ app.post('/GetStudentsInHat', function(req, res) {
 
 
     if (sess.username){
+		
+		
         
         // check if class is one owned by teacher
         var TeacherID = sess.TeacherID;
-
-        var data = getPreData('GetClassesByTeacher');
-        data += '<TeacherID>' + TeacherID + '</TeacherID>';
-        data += getPostData('GetClassesByTeacher');
-        request.post({
-            url : apiurl,
-            headers : {
-                "Content-Type": "application/soap+xml; charset=utf-8"
-            },
-            body : data
-        }, function callback(err, httpResponse, body) {
-        if (err) {
-            console.log(err);
-            res.send("there was an error processing the request.");
-        } else {
-            var classes = getResponseData(body);
-            var ClassID = req.body.ClassID;
-            
-            var hasAccess = false;
-            for (var c in classes) {
-                if (ClassID == classes[c].ClassID)
-                    hasAccess = true;
-            }
-
-            /////DO SOMETHING WITH DATA
-            if (hasAccess){
-                
-                var data = getPreData('GetNamesInHat');
-                data += '<ClassID>' + ClassID + '</ClassID>';
-                data += getPostData('GetNamesInHat');
-                request.post({
-                    url : apiurl,
-                    headers : {
-                        "Content-Type": "application/soap+xml; charset=utf-8"
-                    },
-                    body : data
-                }, function callback(err, httpResponse, body) {
-                if (err) {
-                    console.log(err);
-                    res.send("there was an error processing the request.");
-                } else {
-                    
-                    var response = getResponseData(body);
-                    res.send(response);
-                    /////DO SOMETHING WITH DATA
-                }
-                });
-
-            } else {
-                res.send("You don't have access to this class.");
-            }
-
-        }
-        });       
+		var TeacherIDParam = new Parameter(
+			"TeacherID",
+			sql.Int,
+			TeacherID
+		);
+	
+		var params = [TeacherIDParam];
+		
+		execProcedure('spGetClassesByTeacher', params, function(err, response) {
+			if (err) res.send("There was a problem with your request.");
+			else {
+				
+				var classes = response;
+				var ClassID = req.body.ClassID;
+				
+				
+				
+				var hasAccess = false;
+				for (var c = 0; c<classes.length; c++) {
+					
+					if (ClassID == classes[c].ClassID) {
+						hasAccess = true;
+					}
+				}
+				
+				
+				if (hasAccess) {
+					var ClassIDParam = new Parameter(
+						"ClassID",
+						sql.Int,
+						ClassID
+					);
+					params = [ClassIDParam];
+					
+					execProcedure('spGetNamesInHat', params, 
+						function(err_2, response_2) {
+							if (err_2) res.send("There was a problem with your request");
+							else {
+								console.log(response_2);
+								res.send(response_2);
+							}
+						}
+					);
+					
+				} else {
+					res.send("You don't have access to this class!");
+				}
+			}
+		});      
 
     } else {
         res.send('You need to be logged in');
