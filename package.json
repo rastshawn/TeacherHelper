@@ -17,6 +17,10 @@
   },
   "homepage": "https://gitlab.com/rastshawn/TeacherHelper#README",
   "dependencies": {
+    "ejs": "^2.5.7",
+    "express": "^4.16.2",
+    "express-session": "^1.15.6",
+    "https": "^1.0.0",
     "mssql": "^4.1.0"
   }
 }

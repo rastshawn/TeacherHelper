@@ -1,1 +1,5 @@
-Initial Commit
+Static website is located in the html directory. 
+
+API and static server code are all in server.js
+
+For this to run, there needs to be a file called 'account.js' in the root directory, that exports an account config object for MSSQL. 
